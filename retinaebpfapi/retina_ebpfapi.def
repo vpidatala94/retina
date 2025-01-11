@@ -1,0 +1,5 @@
+LIBRARY
+EXPORTS
+enumerate_cilium_metricsmap
+register_cilium_eventsmap_callback
+unregister_cilium_eventsmap_callback
