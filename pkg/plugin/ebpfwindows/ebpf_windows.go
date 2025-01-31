@@ -98,9 +98,9 @@ func (p *Plugin) Start(ctx context.Context) error {
 
 // metricsMapIterateCallback is the callback function that is called for each key-value pair in the metrics map.
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
-	p.l.Info("MetricsMapIterateCallback")
-	p.l.Info("Key", zap.String("Key", key.String()))
-	p.l.Info("Value", zap.String("Value", value.String()))
+	p.l.Debug("MetricsMapIterateCallback")
+	p.l.Debug("Key", zap.String("Key", key.String()))
+	p.l.Debug("Value", zap.String("Value", value.String()))
 	if key.IsDrop() {
 		if key.IsEgress() {
 			metrics.DropPacketsGauge.WithLabelValues(egressLabel).Set(float64(value.Count()))
@@ -124,8 +124,8 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 
 // eventsMapCallback is the callback function that is called for each value  in the events map.
 func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint64) int {
-	p.l.Info("EventsMapCallback")
-	p.l.Info("Size", zap.Uint64("Size", size))
+	p.l.Debug("EventsMapCallback")
+	p.l.Debug("Size", zap.Uint64("Size", size))
 	err := p.handleTraceEvent(data, size)
 	if err != nil {
 		p.l.Error("Error handling trace event", zap.Error(err))
