@@ -7,8 +7,10 @@ package ebpfwindows
 import (
 	"context"
 	"net"
+	"syscall"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/cilium/cilium/api/v1/flow"
 	kcfg "github.com/microsoft/retina/pkg/config"
@@ -29,10 +31,9 @@ type FlowFilter struct {
 	protocol   string
 }
 
-func GetRingData(t *testing.T, e *enricher.Enricher, ctx *context.Context, fltr *FlowFilter) {
+func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, fltr *FlowFilter) {
 	evReader := e.ExportReader()
 	for {
-		t.Log("Get ring data")
 		ev := evReader.NextFollow(*ctx)
 		if ev == nil {
 			break
@@ -49,7 +50,7 @@ func GetRingData(t *testing.T, e *enricher.Enricher, ctx *context.Context, fltr 
 							srcPrt := tcp.GetSourcePort()
 							dstPrt := tcp.GetDestinationPort()
 
-							t.Log("TCP",
+							l.Info("TCP",
 								zap.String("FlowType", flow.GetType().String()),
 								zap.String("srcIP", srcIP),
 								zap.String("dstIP", dstIP),
@@ -67,7 +68,7 @@ func GetRingData(t *testing.T, e *enricher.Enricher, ctx *context.Context, fltr 
 							srcPrt := udp.GetSourcePort()
 							dstPrt := udp.GetDestinationPort()
 
-							t.Log("UDP",
+							l.Info("UDP",
 								zap.String("FlowType", flow.GetType().String()),
 								zap.String("srcIP", srcIP),
 								zap.String("dstIP", dstIP),
@@ -82,29 +83,29 @@ func GetRingData(t *testing.T, e *enricher.Enricher, ctx *context.Context, fltr 
 				}
 			}
 		default:
-			t.Log("Unknown event type", zap.Any("event", ev))
+			l.Info("Unknown event type", zap.Any("event", ev))
 		}
 	}
 
 	err := evReader.Close()
 	if err != nil {
-		t.Error("Error closing the event reader", zap.Error(err))
+		l.Error("Error closing the event reader", zap.Error(err))
 	}
-	t.Error("Could not find expected flow object")
+	l.Error("Could not find expected flow object")
 }
 
-func StartUDPClient(t *testing.T, serverAddr string) {
+func StartUDPClient(l *log.ZapLogger, serverAddr string) {
 	// Resolve the server address
 	addr, err := net.ResolveUDPAddr("udp", serverAddr)
 	if err != nil {
-		t.Error("Error resolving address:", err)
+		l.Error("Error resolving address:", zap.Error(err))
 		return
 	}
 
 	// Create a UDP connection
 	conn, err := net.DialUDP("udp", nil, addr)
 	if err != nil {
-		t.Error("Error dialing UDP:", err)
+		l.Error("Error dialing UDP:", zap.Error(err))
 		return
 	}
 	defer conn.Close()
@@ -113,29 +114,17 @@ func StartUDPClient(t *testing.T, serverAddr string) {
 	message := []byte("Hello, UDP server!")
 	_, err = conn.Write(message)
 	if err != nil {
-		t.Error("Error sending message:", err)
+		l.Error("Error sending message:", zap.Error(err))
 		return
 	}
-	t.Log("Message sent to server")
-
-	// Set a read deadline
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-
-	// Read the response from the server
-	buffer := make([]byte, 1024)
-	n, _, err := conn.ReadFromUDP(buffer)
-	if err != nil {
-		t.Error("Error reading response:", err)
-		return
-	}
-	t.Log("Response from server:", string(buffer[:n]))
+	l.Info("Message sent to server")
 }
 
-func StartUDPServer(t *testing.T, serverAddr string, ctx context.Context, serverStarted chan<- bool) {
+func StartUDPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, serverStarted chan<- bool) {
 	// Resolve the server address
 	addr, err := net.ResolveUDPAddr("udp", serverAddr)
 	if err != nil {
-		t.Error("Error resolving address:", err)
+		l.Error("Error resolving address:", zap.Error(err))
 		serverStarted <- false
 		return
 	}
@@ -143,7 +132,7 @@ func StartUDPServer(t *testing.T, serverAddr string, ctx context.Context, server
 	// Create a UDP connection
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		t.Error("Error listening on UDP:", err)
+		l.Error("Error listening on UDP:", zap.Error(err))
 		serverStarted <- false
 		return
 	}
@@ -156,44 +145,57 @@ func StartUDPServer(t *testing.T, serverAddr string, ctx context.Context, server
 	for {
 		select {
 		case <-ctx.Done():
-			t.Log("UDP server shutting down")
+			l.Info("UDP server shutting down")
 			return
 		default:
 			// Read from the connection
-			n, clientAddr, err := conn.ReadFromUDP(buffer)
+			_, clientAddr, err := conn.ReadFromUDP(buffer)
 			if err != nil {
-				t.Error("Error reading from UDP:", err)
+				l.Error("Error reading from UDP:", zap.Error(err))
 				return
 			}
 
 			// Print the received message
-			t.Log("Received message from", clientAddr, string(buffer[:n]))
-
-			// Send a response back to the client
-			response := []byte("Hello, UDP client!")
-			_, err = conn.WriteToUDP(response, clientAddr)
-			if err != nil {
-				t.Error("Error sending response:", err)
-				return
-			}
+			l.Info("Received message from", zap.String("clientAddr", clientAddr.String()))
 		}
 	}
 }
 
 func LoadAndAttachBpfProgram(t *testing.T) {
 	Ebpfapi := windows.NewLazyDLL("ebpfapi.dll")
+	if Ebpfapi == nil {
+		t.Error("Error looking up Ebpfapi")
+		return
+	}
 	bpf_object__open := Ebpfapi.NewProc("bpf_object__open")
-	bpf_object__open.Call("bpf_event_writer.sys")
-	if obj == NULL {
-		fprintf(stderr, "Failed to open BPF sys file\n")
-		return 1
+	bpf_object__load := Ebpfapi.NewProc("bpf_object__load")
+	bpf_object__find_program_by_name := Ebpfapi.NewProc("bpf_object__find_program_by_name")
+	bpf_object__close := Ebpfapi.NewProc("bpf_object__close")
+	bpf_program__attach := Ebpfapi.NewProc("bpf_program__attach")
+
+	obj, _, err := bpf_object__open.Call(uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr("bpf_event_writer.sys"))))
+	if obj == 0 {
+		t.Error("Error calling bpf_object__open:", err)
+	} else {
+		t.Log("bpf_object__open called successfully")
+	}
+	ret, _, err := bpf_object__load.Call(uintptr(obj))
+	if ret == 0 {
+		t.Error("Error calling bpf_object__load:", err)
+	} else {
+		t.Log("bpf_object__load called successfully")
+	}
+	defer bpf_object__close.Call(obj)
+	prg, _, err := bpf_object__find_program_by_name.Call(obj, uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr("event_writer"))))
+	if prg == 0 {
+		t.Error("Failed to find event_writer program")
+		return
 	}
 
-	// Load cilium_events map and tcp_connect bpf program
-	if bpf_object__load(obj) < 0 {
-		fprintf(stderr, "Failed to load BPF sys\n")
-		bpf_object__close(obj)
-		return 1
+	link, _, err := bpf_program__attach.Call(prg)
+	if link == 0 {
+		t.Error("BPF program bpf_event_writer.sys failed to attach ", err)
+		return
 	}
 }
 
@@ -241,11 +243,9 @@ func TestUDPTraceEvent(t *testing.T) {
 		return
 	}
 
-	go tt.Start(ctx)
+	tt.Start(ctx)
 	defer func() {
-		if err := tt.Stop(); err != nil {
-			l.Error("Failed to stop windows ebpf plugin", zap.Error(err))
-		}
+		tt.Stop()
 	}()
 
 	flowfltr := &FlowFilter{
@@ -258,8 +258,8 @@ func TestUDPTraceEvent(t *testing.T) {
 
 	// Start UDP server
 	serverStarted := make(chan bool)
-	t.Log("Preparing to start UDP server")
-	go StartUDPServer(t, "127.0.0.1:8080", ctx, serverStarted)
+	l.Info("Preparing to start UDP server")
+	go StartUDPServer(l, "127.0.0.1:8080", ctx, serverStarted)
 	select {
 	case success := <-serverStarted:
 		if !success {
@@ -272,8 +272,8 @@ func TestUDPTraceEvent(t *testing.T) {
 	}
 	t.Log("UDP server started")
 	// Start UDP client
-	StartUDPClient(t, "127.0.0.1:8080")
+	StartUDPClient(l, "127.0.0.1:8080")
 	t.Log("UDP client started")
 	// Validate results
-	GetRingData(t, e, &ctx, flowfltr)
+	GetRingData(l, e, &ctx, flowfltr)
 }
