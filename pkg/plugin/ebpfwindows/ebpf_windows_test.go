@@ -35,17 +35,14 @@ var (
 
 func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, fltr *FlowFilter) int {
 	evReader := e.ExportReader()
-	startTime := time.Now()
-	timeout := 10 * time.Second
 	for {
-		if time.Since(startTime) > timeout {
-			l.Info("Timeout reached")
-			return 0
-		}
 		ev := evReader.NextFollow(*ctx)
 		if ev == nil {
+			l.Info("No more events, breaking loop")
 			break
 		}
+
+		l.Info("Get data")
 
 		switch ev.Event.(type) {
 		case *flow.Flow:
@@ -65,7 +62,7 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 								zap.Uint32("srcP", srcPrt),
 								zap.Uint32("dstP", dstPrt),
 							)
-							if fltr.protocol == "TCP" && (srcIP != fltr.srcIP || dstIP != fltr.dstIP || dstPrt != fltr.destPort) {
+							if fltr.protocol == "TCP" && (srcIP == fltr.srcIP && dstIP == fltr.dstIP && dstPrt == fltr.destPort && srcPrt == fltr.sourcePort) {
 								return 0
 							}
 						}
@@ -83,7 +80,7 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 								zap.Uint32("srcP", srcPrt),
 								zap.Uint32("dstP", dstPrt),
 							)
-							if fltr.protocol == "UDP" && (srcIP != fltr.srcIP || dstIP != fltr.dstIP || dstPrt != fltr.destPort) {
+							if fltr.protocol == "UDP" && (srcIP == fltr.srcIP && dstIP == fltr.dstIP && dstPrt == fltr.destPort && srcPrt == fltr.sourcePort) {
 								return 0
 							}
 						}
@@ -103,13 +100,13 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 	return 1
 }
 
-func StartTCPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, serverStarted chan<- bool) {
+func StartTCPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, serverStarted chan<- bool) int {
 	// Resolve the server address
 	addr, err := net.ResolveTCPAddr("tcp", serverAddr)
 	if err != nil {
 		l.Error("Error resolving address:", zap.Error(err))
 		serverStarted <- false
-		return
+		return 1
 	}
 
 	// Create a TCP listener
@@ -117,24 +114,24 @@ func StartTCPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, se
 	if err != nil {
 		l.Error("Error listening on TCP:", zap.Error(err))
 		serverStarted <- false
-		return
+		return 1
 	}
 	defer ln.Close()
 
 	// Signal that the server has started
 	serverStarted <- true
-
+serverLoop:
 	for {
 		select {
 		case <-ctx.Done():
 			l.Info("TCP server shutting down")
-			return
+			break serverLoop
 		default:
 			// Accept incoming TCP connections
 			conn, err := ln.AcceptTCP()
 			if err != nil {
 				l.Error("Error accepting TCP connection:", zap.Error(err))
-				return
+				return 1
 			}
 
 			// Handle the TCP connection
@@ -146,29 +143,38 @@ func StartTCPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, se
 			if err != nil {
 				l.Error("Error reading from TCP connection:", zap.Error(err))
 				conn.Close()
-				return
+				return 1
 			}
 
 			// Print the received message
-			l.Info("Received message from client: ", zap.String("message", string(buffer)))
+			l.Info("Received message from client")
 			conn.Close()
+			break serverLoop
 		}
 	}
+
+	return 0
 }
 
-func StartTCPClient(l *log.ZapLogger, serverAddr string) {
+func StartTCPClient(l *log.ZapLogger, serverAddr string, clientaddr string) int {
 	// Resolve the server address
 	addr, err := net.ResolveTCPAddr("tcp", serverAddr)
 	if err != nil {
 		l.Error("Error resolving address:", zap.Error(err))
-		return
+		return 1
+	}
+
+	caddr, err := net.ResolveTCPAddr("tcp", clientaddr)
+	if err != nil {
+		l.Error("Error resolving client address:", zap.Error(err))
+		return 1
 	}
 
 	// Create a TCP connection
-	conn, err := net.DialTCP("tcp", nil, addr)
+	conn, err := net.DialTCP("tcp", caddr, addr)
 	if err != nil {
 		l.Error("Error dialing TCP:", zap.Error(err))
-		return
+		return 1
 	}
 	defer conn.Close()
 
@@ -177,24 +183,31 @@ func StartTCPClient(l *log.ZapLogger, serverAddr string) {
 	_, err = conn.Write(message)
 	if err != nil {
 		l.Error("Error sending message:", zap.Error(err))
-		return
+		return 1
 	}
 	l.Info("Message sent to server")
+	return 0
 }
 
-func StartUDPClient(l *log.ZapLogger, serverAddr string) {
+func StartUDPClient(l *log.ZapLogger, serverAddr string, clientaddr string) int {
 	// Resolve the server address
 	addr, err := net.ResolveUDPAddr("udp", serverAddr)
 	if err != nil {
 		l.Error("Error resolving address:", zap.Error(err))
-		return
+		return 1
+	}
+
+	caddr, err := net.ResolveUDPAddr("tcp", clientaddr)
+	if err != nil {
+		l.Error("Error resolving client address:", zap.Error(err))
+		return 1
 	}
 
 	// Create a UDP connection
-	conn, err := net.DialUDP("udp", nil, addr)
+	conn, err := net.DialUDP("udp", caddr, addr)
 	if err != nil {
 		l.Error("Error dialing UDP:", zap.Error(err))
-		return
+		return 1
 	}
 	defer conn.Close()
 
@@ -203,18 +216,19 @@ func StartUDPClient(l *log.ZapLogger, serverAddr string) {
 	_, err = conn.Write(message)
 	if err != nil {
 		l.Error("Error sending message:", zap.Error(err))
-		return
+		return 1
 	}
 	l.Info("Message sent to server")
+	return 0
 }
 
-func StartUDPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, serverStarted chan<- bool) {
+func StartUDPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, serverStarted chan<- bool) int {
 	// Resolve the server address
 	addr, err := net.ResolveUDPAddr("udp", serverAddr)
 	if err != nil {
 		l.Error("Error resolving address:", zap.Error(err))
 		serverStarted <- false
-		return
+		return 1
 	}
 
 	// Create a UDP connection
@@ -222,7 +236,7 @@ func StartUDPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, se
 	if err != nil {
 		l.Error("Error listening on UDP:", zap.Error(err))
 		serverStarted <- false
-		return
+		return 1
 	}
 	defer conn.Close()
 
@@ -230,48 +244,59 @@ func StartUDPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, se
 	serverStarted <- true
 
 	buffer := make([]byte, 1024)
+serverLoop:
 	for {
 		select {
 		case <-ctx.Done():
 			l.Info("UDP server shutting down")
-			return
+			return 1
 		default:
 			// Read from the connection
 			_, clientAddr, err := conn.ReadFromUDP(buffer)
 			if err != nil {
 				l.Error("Error reading from UDP:", zap.Error(err))
-				return
+				return 1
 			}
 
 			// Print the received message
 			l.Info("Received message from", zap.String("clientAddr", clientAddr.String()))
+			break serverLoop
 		}
 	}
+
+	return 0
 }
 
-func StartUDPExchange(ctx context.Context, l *log.ZapLogger) int {
+func StartUDPExchange(ctx context.Context, l *log.ZapLogger) *FlowFilter {
 	// Start UDP server
 	serverStarted := make(chan bool)
 	l.Info("Preparing to start UDP server")
-	go StartUDPServer(l, "127.0.0.1:8080", ctx, serverStarted)
+	go StartUDPServer(l, "127.0.0.1:8081", ctx, serverStarted)
 	select {
 	case success := <-serverStarted:
 		if !success {
 			l.Error("UDP server failed to start")
-			return 1
+			return nil
 		}
 	case <-time.After(10 * time.Second): // Adjust the timeout duration as needed
 		l.Error("Server start timed out")
-		return 1
+		return nil
 	}
 	l.Info("UDP server started")
 	// Start UDP client
-	StartUDPClient(l, "127.0.0.1:8000")
+	StartUDPClient(l, "127.0.0.1:8081", "127.0.0.1:60000")
 	l.Info("UDP client started")
-	return 0
+	flowfltr := &FlowFilter{
+		dstIP:      "127.0.0.1",
+		srcIP:      "127.0.0.1",
+		destPort:   8080,
+		sourcePort: 60000,
+		protocol:   "UDP",
+	}
+	return flowfltr
 }
 
-func StartTCPExchange(ctx context.Context, l *log.ZapLogger) int {
+func StartTCPExchange(ctx context.Context, l *log.ZapLogger) *FlowFilter {
 	// Start TCP server
 	serverStarted := make(chan bool)
 	l.Info("Preparing to start TCP server")
@@ -280,18 +305,24 @@ func StartTCPExchange(ctx context.Context, l *log.ZapLogger) int {
 	case success := <-serverStarted:
 		if !success {
 			l.Error("TCP server failed to start")
-			return 1
+			return nil
 		}
 	case <-time.After(10 * time.Second): // Adjust the timeout duration as needed
 		l.Error("Server start timed out")
-		return 1
+		return nil
 	}
 	l.Info("TCP server started")
 
 	// Start TCP client
-	StartTCPClient(l, "127.0.0.1:8080")
-	l.Info("TCP client started")
-	return 0
+	StartTCPClient(l, "127.0.0.1:8080", "127.0.0.1:50000")
+	flowfltr := &FlowFilter{
+		dstIP:      "127.0.0.1",
+		srcIP:      "127.0.0.1",
+		destPort:   8080,
+		sourcePort: 50000,
+		protocol:   "TCP",
+	}
+	return flowfltr
 }
 
 func LoadAndAttachBpfProgram(l *log.ZapLogger) int {
@@ -394,27 +425,19 @@ func TestMain(t *testing.T) {
 }
 
 func CreateEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, proto string, l *log.ZapLogger) int {
-	flowfltr := &FlowFilter{
-		dstIP:      "127.0.0.1",
-		srcIP:      "127.0.0.1",
-		destPort:   8080,
-		sourcePort: 8000,
-		protocol:   proto,
-	}
-
 	set_event_type := Event_WriterDLL.NewProc("set_event_type")
 	l.Info("Setting event type", zap.Uint8("evt_type", evt_type))
 	set_event_type.Call(uintptr(evt_type))
 	// Validate results
 	if proto == "TCP" {
-		if ret := StartTCPExchange(ctx, l); ret != 0 {
-			return ret
+		if ret := StartTCPExchange(ctx, l); ret != nil {
+			return GetRingData(l, e, &ctx, ret)
 		}
 	} else {
-		if ret := StartUDPExchange(ctx, l); ret != 0 {
-			return ret
+		if ret := StartUDPExchange(ctx, l); ret != nil {
+			return GetRingData(l, e, &ctx, ret)
 		}
 	}
 
-	return GetRingData(l, e, &ctx, flowfltr)
+	return 1
 }
