@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cilium/cilium/api/v1/flow"
+	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
 	kcfg "github.com/microsoft/retina/pkg/config"
 	"github.com/microsoft/retina/pkg/controllers/cache"
 	"github.com/microsoft/retina/pkg/enricher"
@@ -33,13 +34,27 @@ var (
 	Event_WriterDLL = windows.NewLazyDLL("event_writer.dll")
 )
 
-func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, fltr *FlowFilter) int {
+func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, fltr *FlowFilter, eventChannel chan int) {
 	evReader := e.ExportReader()
-	for {
+	timeout := 180 * time.Second
+	timeoutChan := time.After(timeout)
+	getData := make(chan *v1.Event)
+
+	go func() {
 		ev := evReader.NextFollow(*ctx)
+		getData <- ev
+	}()
+
+	select {
+	case <-timeoutChan:
+		l.Info("Timeout reached")
+		eventChannel <- 0
+		return
+	case ev := <-getData:
 		if ev == nil {
 			l.Info("No more events, breaking loop")
-			break
+			eventChannel <- 0
+			return
 		}
 
 		l.Info("Get data")
@@ -63,7 +78,8 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 								zap.Uint32("dstP", dstPrt),
 							)
 							if fltr.protocol == "TCP" && (srcIP == fltr.srcIP && dstIP == fltr.dstIP && dstPrt == fltr.destPort && srcPrt == fltr.sourcePort) {
-								return 0
+								eventChannel <- 0
+								return
 							}
 						}
 
@@ -81,7 +97,7 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 								zap.Uint32("dstP", dstPrt),
 							)
 							if fltr.protocol == "UDP" && (srcIP == fltr.srcIP && dstIP == fltr.dstIP && dstPrt == fltr.destPort && srcPrt == fltr.sourcePort) {
-								return 0
+								eventChannel <- 0
 							}
 						}
 					}
@@ -97,7 +113,7 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 		l.Error("Error closing the event reader", zap.Error(err))
 	}
 	l.Error("Could not find expected flow object")
-	return 1
+	eventChannel <- 1
 }
 
 func StartTCPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, serverStarted chan<- bool) int {
@@ -267,62 +283,49 @@ serverLoop:
 	return 0
 }
 
-func StartUDPExchange(ctx context.Context, l *log.ZapLogger) *FlowFilter {
+func StartUDPExchange(ctx context.Context, l *log.ZapLogger, serveraddr string, clientaddr string) int {
 	// Start UDP server
 	serverStarted := make(chan bool)
 	l.Info("Preparing to start UDP server")
-	go StartUDPServer(l, "127.0.0.1:8081", ctx, serverStarted)
+	go StartUDPServer(l, serveraddr, ctx, serverStarted)
 	select {
 	case success := <-serverStarted:
 		if !success {
 			l.Error("UDP server failed to start")
-			return nil
+			return 1
 		}
 	case <-time.After(10 * time.Second): // Adjust the timeout duration as needed
 		l.Error("Server start timed out")
-		return nil
+		return 1
 	}
 	l.Info("UDP server started")
+
 	// Start UDP client
-	StartUDPClient(l, "127.0.0.1:8081", "127.0.0.1:60000")
+	StartUDPClient(l, serveraddr, clientaddr)
 	l.Info("UDP client started")
-	flowfltr := &FlowFilter{
-		dstIP:      "127.0.0.1",
-		srcIP:      "127.0.0.1",
-		destPort:   8080,
-		sourcePort: 60000,
-		protocol:   "UDP",
-	}
-	return flowfltr
+	return 0
 }
 
-func StartTCPExchange(ctx context.Context, l *log.ZapLogger) *FlowFilter {
+func StartTCPExchange(ctx context.Context, l *log.ZapLogger, serveraddr string, clientaddr string) int {
 	// Start TCP server
 	serverStarted := make(chan bool)
 	l.Info("Preparing to start TCP server")
-	go StartTCPServer(l, "127.0.0.1:8080", ctx, serverStarted)
+	go StartTCPServer(l, serveraddr, ctx, serverStarted)
 	select {
 	case success := <-serverStarted:
 		if !success {
 			l.Error("TCP server failed to start")
-			return nil
+			return 1
 		}
 	case <-time.After(10 * time.Second): // Adjust the timeout duration as needed
 		l.Error("Server start timed out")
-		return nil
+		return 1
 	}
 	l.Info("TCP server started")
 
 	// Start TCP client
-	StartTCPClient(l, "127.0.0.1:8080", "127.0.0.1:50000")
-	flowfltr := &FlowFilter{
-		dstIP:      "127.0.0.1",
-		srcIP:      "127.0.0.1",
-		destPort:   8080,
-		sourcePort: 50000,
-		protocol:   "TCP",
-	}
-	return flowfltr
+	StartTCPClient(l, serveraddr, clientaddr)
+	return 0
 }
 
 func LoadAndAttachBpfProgram(l *log.ZapLogger) int {
@@ -428,16 +431,31 @@ func CreateEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, prot
 	set_event_type := Event_WriterDLL.NewProc("set_event_type")
 	l.Info("Setting event type", zap.Uint8("evt_type", evt_type))
 	set_event_type.Call(uintptr(evt_type))
-	// Validate results
+	flowfltr := &FlowFilter{
+		dstIP:      "127.0.0.1",
+		srcIP:      "127.0.0.1",
+		destPort:   8080,
+		sourcePort: 50000,
+		protocol:   proto,
+	}
+
+	ringDataChannel := make(chan int, 1)
+	go GetRingData(l, e, &ctx, flowfltr, ringDataChannel)
+
 	if proto == "TCP" {
-		if ret := StartTCPExchange(ctx, l); ret != nil {
-			return GetRingData(l, e, &ctx, ret)
+		ret := StartTCPExchange(ctx, l, "127.0.0.1:8080", "127.0.0.1:50000")
+		if ret != 0 {
+			return ret
 		}
 	} else {
-		if ret := StartUDPExchange(ctx, l); ret != nil {
-			return GetRingData(l, e, &ctx, ret)
+		ret := StartUDPExchange(ctx, l, "127.0.0.1:8080", "127.0.0.1:50000")
+		if ret != 0 {
+			return ret
 		}
 	}
 
-	return 1
+	if ret := <-ringDataChannel; ret != 0 {
+		return ret
+	}
+	return 0
 }
