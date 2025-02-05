@@ -22,19 +22,19 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-type FlowFilter struct {
-	dstIP      string
-	srcIP      string
-	destPort   uint32
-	sourcePort uint32
-	protocol   string
+type FiveTuple struct {
+	SrcIP    string
+	DstIP    string
+	SrcPort  int
+	DstPort  int
+	Protocol string
 }
 
 var (
 	Event_WriterDLL = windows.NewLazyDLL("event_writer.dll")
 )
 
-func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, fltr *FlowFilter, eventChannel chan int) {
+func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, eventChannel chan int) {
 	evReader := e.ExportReader()
 	timeout := 180 * time.Second
 	timeoutChan := time.After(timeout)
@@ -77,10 +77,6 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 								zap.Uint32("srcP", srcPrt),
 								zap.Uint32("dstP", dstPrt),
 							)
-							if fltr.protocol == "TCP" && (srcIP == fltr.srcIP && dstIP == fltr.dstIP && dstPrt == fltr.destPort && srcPrt == fltr.sourcePort) {
-								eventChannel <- 0
-								return
-							}
 						}
 
 						if udp := l4.GetUDP(); udp != nil {
@@ -96,9 +92,6 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 								zap.Uint32("srcP", srcPrt),
 								zap.Uint32("dstP", dstPrt),
 							)
-							if fltr.protocol == "UDP" && (srcIP == fltr.srcIP && dstIP == fltr.dstIP && dstPrt == fltr.destPort && srcPrt == fltr.sourcePort) {
-								eventChannel <- 0
-							}
 						}
 					}
 				}
@@ -116,226 +109,44 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, f
 	eventChannel <- 1
 }
 
-func StartTCPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, serverStarted chan<- bool) int {
-	// Resolve the server address
-	addr, err := net.ResolveTCPAddr("tcp", serverAddr)
+func GetAllInterfaces(l *log.ZapLogger) []int {
+	interfaces, err := net.Interfaces()
+	var ifaceList []int
 	if err != nil {
-		l.Error("Error resolving address:", zap.Error(err))
-		serverStarted <- false
-		return 1
+		l.Error("Error:", zap.Error(err))
+		return nil
 	}
 
-	// Create a TCP listener
-	ln, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		l.Error("Error listening on TCP:", zap.Error(err))
-		serverStarted <- false
-		return 1
-	}
-	defer ln.Close()
-
-	// Signal that the server has started
-	serverStarted <- true
-serverLoop:
-	for {
-		select {
-		case <-ctx.Done():
-			l.Info("TCP server shutting down")
-			break serverLoop
-		default:
-			// Accept incoming TCP connections
-			conn, err := ln.AcceptTCP()
-			if err != nil {
-				l.Error("Error accepting TCP connection:", zap.Error(err))
-				return 1
-			}
-
-			// Handle the TCP connection
-			l.Info("Received TCP connection from", zap.String("clientAddr", conn.RemoteAddr().String()))
-
-			// Read the data from the connection
-			buffer := make([]byte, 1024)
-			_, err = conn.Read(buffer)
-			if err != nil {
-				l.Error("Error reading from TCP connection:", zap.Error(err))
-				conn.Close()
-				return 1
-			}
-
-			// Print the received message
-			l.Info("Received message from client")
-			conn.Close()
-			break serverLoop
-		}
+	// Iterate over the interfaces and print their indices
+	for _, iface := range interfaces {
+		ifaceList = append(ifaceList, iface.Index)
 	}
 
-	return 0
+	return ifaceList
 }
 
-func StartTCPClient(l *log.ZapLogger, serverAddr string, clientaddr string) int {
-	// Resolve the server address
-	addr, err := net.ResolveTCPAddr("tcp", serverAddr)
-	if err != nil {
-		l.Error("Error resolving address:", zap.Error(err))
-		return 1
-	}
-
-	caddr, err := net.ResolveTCPAddr("tcp", clientaddr)
-	if err != nil {
-		l.Error("Error resolving client address:", zap.Error(err))
-		return 1
-	}
-
-	// Create a TCP connection
-	conn, err := net.DialTCP("tcp", caddr, addr)
-	if err != nil {
-		l.Error("Error dialing TCP:", zap.Error(err))
-		return 1
-	}
-	defer conn.Close()
-
-	// Send a message to the server
-	message := []byte("Hello, TCP server!")
-	_, err = conn.Write(message)
-	if err != nil {
-		l.Error("Error sending message:", zap.Error(err))
-		return 1
-	}
-	l.Info("Message sent to server")
-	return 0
-}
-
-func StartUDPClient(l *log.ZapLogger, serverAddr string, clientaddr string) int {
-	// Resolve the server address
-	addr, err := net.ResolveUDPAddr("udp", serverAddr)
-	if err != nil {
-		l.Error("Error resolving address:", zap.Error(err))
-		return 1
-	}
-
-	caddr, err := net.ResolveUDPAddr("tcp", clientaddr)
-	if err != nil {
-		l.Error("Error resolving client address:", zap.Error(err))
-		return 1
-	}
-
-	// Create a UDP connection
-	conn, err := net.DialUDP("udp", caddr, addr)
-	if err != nil {
-		l.Error("Error dialing UDP:", zap.Error(err))
-		return 1
-	}
-	defer conn.Close()
-
-	// Send a message to the server
-	message := []byte("Hello, UDP server!")
-	_, err = conn.Write(message)
-	if err != nil {
-		l.Error("Error sending message:", zap.Error(err))
-		return 1
-	}
-	l.Info("Message sent to server")
-	return 0
-}
-
-func StartUDPServer(l *log.ZapLogger, serverAddr string, ctx context.Context, serverStarted chan<- bool) int {
-	// Resolve the server address
-	addr, err := net.ResolveUDPAddr("udp", serverAddr)
-	if err != nil {
-		l.Error("Error resolving address:", zap.Error(err))
-		serverStarted <- false
-		return 1
-	}
-
-	// Create a UDP connection
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		l.Error("Error listening on UDP:", zap.Error(err))
-		serverStarted <- false
-		return 1
-	}
-	defer conn.Close()
-
-	// Signal that the server has started
-	serverStarted <- true
-
-	buffer := make([]byte, 1024)
-serverLoop:
-	for {
-		select {
-		case <-ctx.Done():
-			l.Info("UDP server shutting down")
-			return 1
-		default:
-			// Read from the connection
-			_, clientAddr, err := conn.ReadFromUDP(buffer)
-			if err != nil {
-				l.Error("Error reading from UDP:", zap.Error(err))
-				return 1
-			}
-
-			// Print the received message
-			l.Info("Received message from", zap.String("clientAddr", clientAddr.String()))
-			break serverLoop
-		}
-	}
-
-	return 0
-}
-
-func StartUDPExchange(ctx context.Context, l *log.ZapLogger, serveraddr string, clientaddr string) int {
-	// Start UDP server
-	serverStarted := make(chan bool)
-	l.Info("Preparing to start UDP server")
-	go StartUDPServer(l, serveraddr, ctx, serverStarted)
-	select {
-	case success := <-serverStarted:
-		if !success {
-			l.Error("UDP server failed to start")
-			return 1
-		}
-	case <-time.After(10 * time.Second): // Adjust the timeout duration as needed
-		l.Error("Server start timed out")
-		return 1
-	}
-	l.Info("UDP server started")
-
-	// Start UDP client
-	StartUDPClient(l, serveraddr, clientaddr)
-	l.Info("UDP client started")
-	return 0
-}
-
-func StartTCPExchange(ctx context.Context, l *log.ZapLogger, serveraddr string, clientaddr string) int {
-	// Start TCP server
-	serverStarted := make(chan bool)
-	l.Info("Preparing to start TCP server")
-	go StartTCPServer(l, serveraddr, ctx, serverStarted)
-	select {
-	case success := <-serverStarted:
-		if !success {
-			l.Error("TCP server failed to start")
-			return 1
-		}
-	case <-time.After(10 * time.Second): // Adjust the timeout duration as needed
-		l.Error("Server start timed out")
-		return 1
-	}
-	l.Info("TCP server started")
-
-	// Start TCP client
-	StartTCPClient(l, serveraddr, clientaddr)
-	return 0
-}
-
-func LoadAndAttachBpfProgram(l *log.ZapLogger) int {
+func LoadBpfProgramPinMapsAttach(l *log.ZapLogger) int {
 	if Event_WriterDLL == nil {
 		l.Error("Error looking up Event_WriterDLL")
 		return 1
 	}
 
-	pin_maps_load_attach_programs := Event_WriterDLL.NewProc("pin_maps_load_attach_programs")
-	pin_maps_load_attach_programs.Call()
+	pin_maps_load_programs := Event_WriterDLL.NewProc("pin_maps_load_programs")
+	ret, _, err := pin_maps_load_programs.Call()
+	if ret != 0 {
+		l.Error("Failed to load BPF program and map", zap.Error(err))
+		return 1
+	}
+
+	attach_program_to_interface := Event_WriterDLL.NewProc("attach_program_to_interface")
+	ifindexList := GetAllInterfaces(l)
+	if len(ifindexList) == 0 {
+		l.Error("No interfaces found")
+		return 1
+	}
+	for _, ifidx := range ifindexList {
+		attach_program_to_interface.Call(uintptr(ifidx)) // Directly passing integer value as uintptr
+	}
 	return 0
 }
 
@@ -356,10 +167,11 @@ func TestMain(t *testing.T) {
 	ctx := context.Background()
 
 	//Load and attach ebpf program
-	if ret := LoadAndAttachBpfProgram(l); ret != 0 {
+	if ret := LoadBpfProgramPinMapsAttach(l); ret != 0 {
 		t.Fail()
 		return
 	}
+
 	defer DetachBpfProgram(l)
 
 	cfg := &kcfg.Config{
@@ -407,55 +219,16 @@ func TestMain(t *testing.T) {
 	}()
 
 	//TRACE ; TCP
-	if CreateEvent(ctx, e, 4, "TCP", l) != 0 {
-		t.Fail()
-	}
-
-	//TRACE ; UDP
-	if CreateEvent(ctx, e, 4, "UDP", l) != 0 {
-		t.Fail()
-	}
-
-	//DROP ; TCP
-	if CreateEvent(ctx, e, 1, "TCP", l) != 0 {
-		t.Fail()
-	}
-
-	//DROP ; UDP
-	if CreateEvent(ctx, e, 1, "UDP", l) != 0 {
+	if RequestEvent(ctx, e, 4, l) != 0 {
 		t.Fail()
 	}
 }
 
-func CreateEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, proto string, l *log.ZapLogger) int {
+func RequestEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, l *log.ZapLogger) int {
 	set_event_type := Event_WriterDLL.NewProc("set_event_type")
 	l.Info("Setting event type", zap.Uint8("evt_type", evt_type))
 	set_event_type.Call(uintptr(evt_type))
-	flowfltr := &FlowFilter{
-		dstIP:      "127.0.0.1",
-		srcIP:      "127.0.0.1",
-		destPort:   8080,
-		sourcePort: 50000,
-		protocol:   proto,
-	}
-
-	ringDataChannel := make(chan int, 1)
-	go GetRingData(l, e, &ctx, flowfltr, ringDataChannel)
-
-	if proto == "TCP" {
-		ret := StartTCPExchange(ctx, l, "127.0.0.1:8080", "127.0.0.1:50000")
-		if ret != 0 {
-			return ret
-		}
-	} else {
-		ret := StartUDPExchange(ctx, l, "127.0.0.1:8080", "127.0.0.1:50000")
-		if ret != 0 {
-			return ret
-		}
-	}
-
-	if ret := <-ringDataChannel; ret != 0 {
-		return ret
-	}
+	eventChannel := make(chan int)
+	GetRingData(l, e, &ctx, eventChannel)
 	return 0
 }
