@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os/exec"
 	"testing"
 	"time"
 	"unsafe"
@@ -70,6 +71,14 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 		getData <- ev
 	}()
 
+	defer func() {
+		err := evReader.Close()
+		if err != nil {
+			l.Error("Error closing the event reader", zap.Error(err))
+		}
+		l.Info("Enricher reader closed")
+	}()
+
 	select {
 	case <-timeoutChan:
 		l.Info("Timeout reached")
@@ -81,8 +90,6 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 			eventChannel <- 0
 			return
 		}
-
-		l.Info("Get data")
 
 		switch ev.Event.(type) {
 		case *flow.Flow:
@@ -166,10 +173,6 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 		}
 	}
 
-	err := evReader.Close()
-	if err != nil {
-		l.Error("Error closing the event reader", zap.Error(err))
-	}
 	l.Error("Could not find expected flow object")
 	eventChannel <- 1
 }
@@ -182,7 +185,6 @@ func GetAllInterfaces(l *log.ZapLogger) []int {
 		return nil
 	}
 
-	// Iterate over the interfaces and print their indices
 	for _, iface := range interfaces {
 		ifaceList = append(ifaceList, iface.Index)
 	}
@@ -197,20 +199,31 @@ func SetupEventWriter(l *log.ZapLogger) int {
 	}
 
 	pin_maps_load_programs := Event_WriterDLL.NewProc("pin_maps_load_programs")
-	ret, _, err := pin_maps_load_programs.Call()
-	if ret != 0 {
+	if ret, _, err := pin_maps_load_programs.Call(); ret != 0 {
 		l.Error("Failed to load BPF program and map", zap.Error(err))
 		return 1
 	}
 
 	attach_program_to_interface := Event_WriterDLL.NewProc("attach_program_to_interface")
-	ifindexList := GetAllInterfaces(l)
-	if len(ifindexList) == 0 {
+	int_attach_count := 0
+	if ifindexList := GetAllInterfaces(l); len(ifindexList) != 0 {
+		for _, ifidx := range ifindexList {
+			//Continue when error
+			if ret, _, err := attach_program_to_interface.Call(uintptr(ifidx)); ret != 0 {
+				l.Error("Failed to attach event_writer", zap.Int("Interface", ifidx), zap.Error(err))
+			} else {
+				l.Info("Event_writer attached to interface", zap.Int("Ifindex", ifidx))
+				int_attach_count += 1
+			}
+		}
+	} else {
 		l.Error("No interfaces found")
 		return 1
 	}
-	for _, ifidx := range ifindexList {
-		attach_program_to_interface.Call(uintptr(ifidx)) // Directly passing integer value as uintptr
+
+	if int_attach_count == 0 {
+		l.Error("Event_writer failed to attach any interface. Cannot continue...")
+		return 1
 	}
 	return 0
 }
@@ -222,8 +235,23 @@ func CloseEventWriter(l *log.ZapLogger) int {
 	}
 
 	unload_programs_detach := Event_WriterDLL.NewProc("unload_programs_detach")
-	unload_programs_detach.Call()
+	ret, _, err := unload_programs_detach.Call()
+	if ret != 0 {
+		l.Error("Error", zap.Error(err))
+	}
+
+	l.Info("Program successfully unloaded and detached")
 	return 0
+}
+
+func Curl(url string) (int, error) {
+	cmd := exec.Command("curl", url)
+	_, err := cmd.Output()
+	if err != nil {
+		return 1, err
+	}
+
+	return 0, nil
 }
 
 func TestMain(t *testing.T) {
@@ -280,18 +308,24 @@ func TestMain(t *testing.T) {
 
 	go tt.Start(ctx)
 	defer func() {
-		tt.Stop()
+		err = tt.Stop()
+		if err != nil {
+			l.Error("Cannot stop the plugin")
+		}
 	}()
 
-	if TraceEvent(ctx, e, 4, l) != 0 {
+	if ValidateFlowObject(l, ctx, e, CiliumNotifyTrace) != 0 {
+		t.Fail()
+	}
+	if ValidateFlowObject(l, ctx, e, CiliumNotifyDrop) != 0 {
 		t.Fail()
 	}
 }
 
-func TraceEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, l *log.ZapLogger) int {
+func ValidateFlowObject(l *log.ZapLogger, ctx context.Context, e *enricher.Enricher, evt_type uint8) int {
 	eventChannel := make(chan int)
 	set_filter := Event_WriterDLL.NewProc("set_filter")
-	//harcoding IP addr for aka.ms - 23.213.38.151
+	// Hardcoding IP addr for aka.ms - 23.213.38.151
 	flt := &Filter{
 		Event:   evt_type,
 		SrcIP:   399845015,
@@ -303,8 +337,17 @@ func TraceEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, l *lo
 	if ret != 0 {
 		l.Error("Failed to load BPF program and map", zap.Error(err))
 		return 1
+	} else {
+		l.Debug("Successfully updated filter")
 	}
-	GetRingData(l, e, &ctx, eventChannel)
-	l.Info("I am done")
-	return 0
+
+	go GetRingData(l, e, &ctx, eventChannel)
+	if ret, err := Curl("aka.ms"); ret != 0 {
+		l.Error("Curl", zap.Error(err))
+		return 1
+	} else {
+		l.Debug("Curl command executed successfully to aka.ms")
+	}
+	result := <-eventChannel
+	return result
 }
