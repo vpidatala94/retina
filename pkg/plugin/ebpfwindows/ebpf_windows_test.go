@@ -9,6 +9,7 @@ import (
 	"net"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/cilium/cilium/api/v1/flow"
 	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
@@ -23,11 +24,19 @@ import (
 )
 
 type FiveTuple struct {
-	SrcIP    string
-	DstIP    string
-	SrcPort  int
-	DstPort  int
+	SrcIP    uint32
+	DstIP    uint32
+	SrcPort  uint16
+	DstPort  uint16
 	Protocol string
+}
+
+type Filter struct {
+	Event   uint8
+	SrcIP   uint32
+	DstIP   uint32
+	SrcPort uint16
+	DstPort uint16
 }
 
 var (
@@ -125,7 +134,7 @@ func GetAllInterfaces(l *log.ZapLogger) []int {
 	return ifaceList
 }
 
-func LoadBpfProgramPinMapsAttach(l *log.ZapLogger) int {
+func SetupEventWriter(l *log.ZapLogger) int {
 	if Event_WriterDLL == nil {
 		l.Error("Error looking up Event_WriterDLL")
 		return 1
@@ -150,7 +159,7 @@ func LoadBpfProgramPinMapsAttach(l *log.ZapLogger) int {
 	return 0
 }
 
-func DetachBpfProgram(l *log.ZapLogger) int {
+func CloseEventWriter(l *log.ZapLogger) int {
 	if Event_WriterDLL == nil {
 		l.Error("Error looking up Event_WriterDLL")
 		return 1
@@ -167,12 +176,12 @@ func TestMain(t *testing.T) {
 	ctx := context.Background()
 
 	//Load and attach ebpf program
-	if ret := LoadBpfProgramPinMapsAttach(l); ret != 0 {
+	if ret := SetupEventWriter(l); ret != 0 {
 		t.Fail()
 		return
 	}
 
-	defer DetachBpfProgram(l)
+	defer CloseEventWriter(l)
 
 	cfg := &kcfg.Config{
 		MetricsInterval: 1 * time.Second,
@@ -218,17 +227,27 @@ func TestMain(t *testing.T) {
 		tt.Stop()
 	}()
 
-	//TRACE ; TCP
-	if RequestEvent(ctx, e, 4, l) != 0 {
+	if TraceEvent(ctx, e, 4, l) != 0 {
 		t.Fail()
 	}
 }
 
-func RequestEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, l *log.ZapLogger) int {
-	set_event_type := Event_WriterDLL.NewProc("set_event_type")
-	l.Info("Setting event type", zap.Uint8("evt_type", evt_type))
-	set_event_type.Call(uintptr(evt_type))
+func TraceEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, l *log.ZapLogger) int {
 	eventChannel := make(chan int)
+	set_filter := Event_WriterDLL.NewProc("set_filter")
+	//harcoding IP addr for aka.ms - 23.213.38.151
+	flt := &Filter{
+		Event:   evt_type,
+		SrcIP:   2010415854,
+		DstIP:   0,
+		SrcPort: 0,
+		DstPort: 0,
+	}
+	ret, _, err := set_filter.Call(uintptr(unsafe.Pointer(flt)))
+	if ret != 0 {
+		l.Error("Failed to load BPF program and map", zap.Error(err))
+		return 1
+	}
 	GetRingData(l, e, &ctx, eventChannel)
 	return 0
 }
