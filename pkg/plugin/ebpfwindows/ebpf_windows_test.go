@@ -86,6 +86,8 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 								zap.Uint32("srcP", srcPrt),
 								zap.Uint32("dstP", dstPrt),
 							)
+
+							if ()
 						}
 
 						if udp := l4.GetUDP(); udp != nil {
@@ -238,7 +240,7 @@ func TraceEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, l *lo
 	//harcoding IP addr for aka.ms - 23.213.38.151
 	flt := &Filter{
 		Event:   evt_type,
-		SrcIP:   2010415854,
+		SrcIP:   399845015,
 		DstIP:   0,
 		SrcPort: 0,
 		DstPort: 0,
