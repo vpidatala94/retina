@@ -49,12 +49,12 @@ var (
 func ParseIPToUInt(ipStr string) (uint32, error) {
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		return 0, fmt.Errorf("Invalid IP address")
+		return 0, fmt.Errorf("ParseIPToUInt - invalid IP address")
 	}
 
 	ip = ip.To4()
 	if ip == nil {
-		return 0, fmt.Errorf("Invalid IPV4 address")
+		return 0, fmt.Errorf("ParseIPToUInt- invalid IPV4 address")
 	}
 	return binary.BigEndian.Uint32(ip), nil
 }
@@ -82,12 +82,12 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 	select {
 	case <-timeoutChan:
 		l.Info("Timeout reached")
-		eventChannel <- 0
+		eventChannel <- 1
 		return
 	case ev := <-getData:
 		if ev == nil {
 			l.Info("No more events, breaking loop")
-			eventChannel <- 0
+			eventChannel <- 1
 			return
 		}
 
@@ -99,16 +99,15 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 						srcIP := ip.Source
 						dstIP := ip.Destination
 						srcIPU32, err := ParseIPToUInt(srcIP)
-						l.Info("IP", zap.Uint32("SRC", srcIPU32))
 						if err != nil {
 							l.Error("Error", zap.Error(err), zap.String("IP", srcIP))
-							eventChannel <- 0
+							eventChannel <- 1
 							return
 						}
 						dstIPU32, err := ParseIPToUInt(dstIP)
 						if err != nil {
 							l.Error("Error", zap.Error(err), zap.String("IP", dstIP))
-							eventChannel <- 0
+							eventChannel <- 1
 							return
 						}
 						if tcp := l4.GetTCP(); tcp != nil {
@@ -134,7 +133,7 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 							ret, _, _ := check_five_tuple_exists.Call(uintptr(unsafe.Pointer(fvt)))
 							if ret == 0 {
 								l.Info("Match found!")
-								eventChannel <- 1
+								eventChannel <- 0
 								return
 							}
 						}
@@ -161,7 +160,7 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 							ret, _, _ := check_five_tuple_exists.Call(uintptr(unsafe.Pointer(fvt)))
 							if ret == 0 {
 								l.Info("Match found!")
-								eventChannel <- 1
+								eventChannel <- 0
 								return
 							}
 						}
@@ -177,78 +176,67 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 	eventChannel <- 1
 }
 
-func GetAllInterfaces(l *log.ZapLogger) []int {
+func GetAllInterfaces() ([]int, error) {
 	interfaces, err := net.Interfaces()
 	var ifaceList []int
 	if err != nil {
-		l.Error("Error:", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	for _, iface := range interfaces {
 		ifaceList = append(ifaceList, iface.Index)
 	}
 
-	return ifaceList
+	return ifaceList, nil
 }
 
-func SetupEventWriter(l *log.ZapLogger) int {
+func SetupEventWriter(l *log.ZapLogger) (int, error) {
 	if Event_WriterDLL == nil {
-		l.Error("Error looking up Event_WriterDLL")
-		return 1
+		return 1, fmt.Errorf("SetupEventWriter - cannot lookup Event_WriterDLL")
 	}
 
 	pin_maps_load_programs := Event_WriterDLL.NewProc("pin_maps_load_programs")
 	if ret, _, err := pin_maps_load_programs.Call(); ret != 0 {
-		l.Error("Failed to load BPF program and map", zap.Error(err))
-		return 1
+		return int(ret), fmt.Errorf("SetupEventWriter - %v", zap.Error(err))
 	}
 
 	attach_program_to_interface := Event_WriterDLL.NewProc("attach_program_to_interface")
 	int_attach_count := 0
-	if ifindexList := GetAllInterfaces(l); len(ifindexList) != 0 {
+	if ifindexList, err := GetAllInterfaces(); err != nil {
+		return 1, fmt.Errorf("SetupEventWriter - no interfaces found")
+	} else {
 		for _, ifidx := range ifindexList {
 			//Continue when error
 			if ret, _, err := attach_program_to_interface.Call(uintptr(ifidx)); ret != 0 {
-				l.Error("Failed to attach event_writer", zap.Int("Interface", ifidx), zap.Error(err))
+				l.Error("SetupEventWriter - failed to attach event_writer", zap.Int("Interface", ifidx), zap.Error(err))
 			} else {
 				l.Info("Event_writer attached to interface", zap.Int("Ifindex", ifidx))
 				int_attach_count += 1
 			}
 		}
-	} else {
-		l.Error("No interfaces found")
-		return 1
 	}
 
-	if int_attach_count == 0 {
-		l.Error("Event_writer failed to attach any interface. Cannot continue...")
-		return 1
-	}
-	return 0
+	return 0, nil
 }
 
-func CloseEventWriter(l *log.ZapLogger) int {
+func CloseEventWriter() (int, error) {
 	if Event_WriterDLL == nil {
-		l.Error("Error looking up Event_WriterDLL")
-		return 1
+		return 1, fmt.Errorf("CloseEventWriter - cannot lookup Event_WriterDLL")
 	}
 
 	unload_programs_detach := Event_WriterDLL.NewProc("unload_programs_detach")
 	ret, _, err := unload_programs_detach.Call()
 	if ret != 0 {
-		l.Error("Error", zap.Error(err))
+		return int(ret), fmt.Errorf("CloseEventWriter - %v", zap.Error(err))
 	}
-
-	l.Info("Program successfully unloaded and detached")
-	return 0
+	return 0, nil
 }
 
 func Curl(url string) (int, error) {
 	cmd := exec.Command("curl", url)
 	_, err := cmd.Output()
 	if err != nil {
-		return 1, err
+		return 1, fmt.Errorf("Curl - %s", err)
 	}
 
 	return 0, nil
@@ -260,12 +248,20 @@ func TestMain(t *testing.T) {
 	ctx := context.Background()
 
 	//Load and attach ebpf program
-	if ret := SetupEventWriter(l); ret != 0 {
+	if ret, err := SetupEventWriter(l); ret != 0 {
+		l.Error("TestMain", zap.Error(err))
 		t.Fail()
 		return
 	}
 
-	defer CloseEventWriter(l)
+	defer func() {
+		ret, err := CloseEventWriter()
+		if ret != 0 {
+			l.Error("TestMain", zap.Error(err))
+			return
+		}
+		l.Info("Program successfully unloaded and detached")
+	}()
 
 	cfg := &kcfg.Config{
 		MetricsInterval: 1 * time.Second,
@@ -282,7 +278,7 @@ func TestMain(t *testing.T) {
 	tt := New(cfg)
 	err := tt.Stop()
 	if err != nil {
-		l.Error("Failed to stop windows ebpf plugin", zap.Error(err))
+		l.Error("TestMain - failed to stop plugin", zap.Error(err))
 		return
 	}
 
@@ -290,19 +286,19 @@ func TestMain(t *testing.T) {
 	defer cancel()
 	err = tt.Generate(ctxTimeout)
 	if err != nil {
-		l.Error("Failed to generate the plugin specific header files", zap.Error(err))
+		l.Error("TestMain - failed to generate plugin", zap.Error(err))
 		return
 	}
 
 	err = tt.Compile(ctxTimeout)
 	if err != nil {
-		l.Error("Failed to compile the ebpf to generate bpf object", zap.Error(err))
+		l.Error("TestMain - failed to compile plugin", zap.Error(err))
 		return
 	}
 
 	err = tt.Init()
 	if err != nil {
-		l.Error("Failed to initialize plugin specific objects", zap.Error(err))
+		l.Error("TestMain - failed to init plugin", zap.Error(err))
 		return
 	}
 
@@ -310,19 +306,21 @@ func TestMain(t *testing.T) {
 	defer func() {
 		err = tt.Stop()
 		if err != nil {
-			l.Error("Cannot stop the plugin")
+			l.Error("TestMain - failed to stop plugin", zap.Error(err))
 		}
 	}()
 
-	if ValidateFlowObject(l, ctx, e, CiliumNotifyTrace) != 0 {
+	if ret, err := ValidateFlowObject(l, ctx, e, CiliumNotifyTrace); ret != 0 {
+		l.Error("TestTraceNotify", zap.Error(err))
 		t.Fail()
 	}
-	if ValidateFlowObject(l, ctx, e, CiliumNotifyDrop) != 0 {
+	if ret, err := ValidateFlowObject(l, ctx, e, CiliumNotifyDrop); ret != 0 {
+		l.Error("TestDropNotify", zap.Error(err))
 		t.Fail()
 	}
 }
 
-func ValidateFlowObject(l *log.ZapLogger, ctx context.Context, e *enricher.Enricher, evt_type uint8) int {
+func ValidateFlowObject(l *log.ZapLogger, ctx context.Context, e *enricher.Enricher, evt_type uint8) (int, error) {
 	eventChannel := make(chan int)
 	set_filter := Event_WriterDLL.NewProc("set_filter")
 	// Hardcoding IP addr for aka.ms - 23.213.38.151
@@ -335,19 +333,15 @@ func ValidateFlowObject(l *log.ZapLogger, ctx context.Context, e *enricher.Enric
 	}
 	ret, _, err := set_filter.Call(uintptr(unsafe.Pointer(flt)))
 	if ret != 0 {
-		l.Error("Failed to load BPF program and map", zap.Error(err))
-		return 1
+		return int(ret), fmt.Errorf("ValidateFlowObject - %v", zap.Error(err))
 	} else {
-		l.Debug("Successfully updated filter")
+		l.Debug("ValidateFlowObject", zap.String("Filter", "Updated successfully"))
 	}
 
 	go GetRingData(l, e, &ctx, eventChannel)
 	if ret, err := Curl("aka.ms"); ret != 0 {
-		l.Error("Curl", zap.Error(err))
-		return 1
-	} else {
-		l.Debug("Curl command executed successfully to aka.ms")
+		return ret, fmt.Errorf("ValidateFlowObject - %v", zap.Error(err))
 	}
 	result := <-eventChannel
-	return result
+	return result, nil
 }
