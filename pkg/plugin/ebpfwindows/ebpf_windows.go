@@ -194,7 +194,6 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint64) error {
 			p.l.Error("Invalid DropNotify data size", zap.Uint64("size", size))
 			return ErrInvalidEventData
 		}
-		p.l.Info("This is DropNotify")
 		e, err := p.parser.Decode(&observer.MonitorEvent{
 			Payload: &observer.PerfEvent{
 				Data: (*[unsafe.Sizeof(DropNotify{})]byte)(data)[:],
@@ -210,7 +209,6 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint64) error {
 			p.l.Error("Invalid TraceNotify data size", zap.Uint64("size", size))
 			return ErrInvalidEventData
 		}
-		p.l.Info("This is TraceNotify")
 		e, err := p.parser.Decode(&observer.MonitorEvent{
 			Payload: &observer.PerfEvent{
 				Data: (*[unsafe.Sizeof(TraceNotify{})]byte)(data)[:],
@@ -220,13 +218,7 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint64) error {
 			p.l.Error("Could not convert event to flow", zap.Any("handleTraceEvent", data), zap.Error(err))
 			return ErrInvalidEventData
 		}
-		flowType := e.GetFlow().GetType().String()
-		srcIP := e.GetFlow().IP.Source
-		dstIP := e.GetFlow().IP.Destination
-		srcP := e.GetFlow().GetL4().GetTCP().GetSourcePort()
-		dstP := e.GetFlow().GetL4().GetTCP().GetDestinationPort()
-		p.l.Info("5 TUPLE", zap.String("srcIP", srcIP), zap.String("dstIP", dstIP), zap.Uint32("srcP", srcP), zap.Uint32("dstP", dstP))
-		p.l.Info("Event converted successfully", zap.String("flowType", flowType))
+
 		p.enricher.Write(e)
 	case CiliumNotifyTraceSock:
 		if uintptr(size) < unsafe.Sizeof(TraceSockNotify{}) {

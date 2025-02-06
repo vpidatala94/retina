@@ -6,6 +6,8 @@ package ebpfwindows
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -24,11 +26,11 @@ import (
 )
 
 type FiveTuple struct {
-	SrcIP    uint32
-	DstIP    uint32
-	SrcPort  uint16
-	DstPort  uint16
-	Protocol string
+	Proto   uint8
+	SrcIP   uint32
+	DstIP   uint32
+	SrcPort uint16
+	DstPort uint16
 }
 
 type Filter struct {
@@ -43,11 +45,25 @@ var (
 	Event_WriterDLL = windows.NewLazyDLL("event_writer.dll")
 )
 
+func ParseIPToUInt(ipStr string) (uint32, error) {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return 0, fmt.Errorf("Invalid IP address")
+	}
+
+	ip = ip.To4()
+	if ip == nil {
+		return 0, fmt.Errorf("Invalid IPV4 address")
+	}
+	return binary.BigEndian.Uint32(ip), nil
+}
+
 func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, eventChannel chan int) {
 	evReader := e.ExportReader()
 	timeout := 180 * time.Second
 	timeoutChan := time.After(timeout)
 	getData := make(chan *v1.Event)
+	check_five_tuple_exists := Event_WriterDLL.NewProc("check_five_tuple_exists")
 
 	go func() {
 		ev := evReader.NextFollow(*ctx)
@@ -73,36 +89,74 @@ func GetRingData(l *log.ZapLogger, e *enricher.Enricher, ctx *context.Context, e
 			if flow := ev.GetFlow(); flow != nil {
 				if ip := flow.GetIP(); ip != nil {
 					if l4 := flow.GetL4(); l4 != nil {
+						srcIP := ip.Source
+						dstIP := ip.Destination
+						srcIPU32, err := ParseIPToUInt(srcIP)
+						l.Info("IP", zap.Uint32("SRC", srcIPU32))
+						if err != nil {
+							l.Error("Error", zap.Error(err), zap.String("IP", srcIP))
+							eventChannel <- 0
+							return
+						}
+						dstIPU32, err := ParseIPToUInt(dstIP)
+						if err != nil {
+							l.Error("Error", zap.Error(err), zap.String("IP", dstIP))
+							eventChannel <- 0
+							return
+						}
 						if tcp := l4.GetTCP(); tcp != nil {
-							srcIP := ip.Source
-							dstIP := ip.Destination
-							srcPrt := tcp.GetSourcePort()
-							dstPrt := tcp.GetDestinationPort()
+							srcPrt := uint16(tcp.GetSourcePort())
+							dstPrt := uint16(tcp.GetDestinationPort())
 
 							l.Info("TCP",
 								zap.String("FlowType", flow.GetType().String()),
 								zap.String("srcIP", srcIP),
 								zap.String("dstIP", dstIP),
-								zap.Uint32("srcP", srcPrt),
-								zap.Uint32("dstP", dstPrt),
+								zap.Uint16("srcP", srcPrt),
+								zap.Uint16("dstP", dstPrt),
 							)
 
-							if ()
+							fvt := &FiveTuple{
+								Proto:   6,
+								SrcIP:   srcIPU32,
+								DstIP:   dstIPU32,
+								SrcPort: srcPrt,
+								DstPort: dstPrt,
+							}
+
+							ret, _, _ := check_five_tuple_exists.Call(uintptr(unsafe.Pointer(fvt)))
+							if ret == 0 {
+								l.Info("Match found!")
+								eventChannel <- 1
+								return
+							}
 						}
 
 						if udp := l4.GetUDP(); udp != nil {
-							srcIP := ip.Source
-							dstIP := ip.Destination
-							srcPrt := udp.GetSourcePort()
-							dstPrt := udp.GetDestinationPort()
+							srcPrt := uint16(udp.GetSourcePort())
+							dstPrt := uint16(udp.GetDestinationPort())
 
 							l.Info("UDP",
 								zap.String("FlowType", flow.GetType().String()),
 								zap.String("srcIP", srcIP),
 								zap.String("dstIP", dstIP),
-								zap.Uint32("srcP", srcPrt),
-								zap.Uint32("dstP", dstPrt),
+								zap.Uint16("srcP", srcPrt),
+								zap.Uint16("dstP", dstPrt),
 							)
+
+							fvt := &FiveTuple{
+								Proto:   17,
+								SrcIP:   srcIPU32,
+								DstIP:   dstIPU32,
+								SrcPort: srcPrt,
+								DstPort: dstPrt,
+							}
+							ret, _, _ := check_five_tuple_exists.Call(uintptr(unsafe.Pointer(fvt)))
+							if ret == 0 {
+								l.Info("Match found!")
+								eventChannel <- 1
+								return
+							}
 						}
 					}
 				}
@@ -251,5 +305,6 @@ func TraceEvent(ctx context.Context, e *enricher.Enricher, evt_type uint8, l *lo
 		return 1
 	}
 	GetRingData(l, e, &ctx, eventChannel)
+	l.Info("I am done")
 	return 0
 }
