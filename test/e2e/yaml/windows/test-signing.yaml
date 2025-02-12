@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: enable-test-signing
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: enable-test-signing-container
+        image: mcr.microsoft.com/windows/servercore:ltsc2022  # Add a base image
+        command:
+        - powershell.exe
+        - -command
+        - |
+          # Enable Test Signing mode on the node
+          bcdedit /set testsigning on
+          bcdedit /set nointegritychecks off
+          Write-Host "Test-Signing enabled. System will restart now."
+
+          # Request system reboot
+          Restart-Computer -Force
+      restartPolicy: Never
+      nodeSelector:
+        kubernetes.io/os: windows
+      securityContext:
+        windowsOptions:
+          runAsUserName: "NT AUTHORITY\\SYSTEM"
+  backoffLimit: 0
