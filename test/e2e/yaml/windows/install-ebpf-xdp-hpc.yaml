@@ -1,61 +1,66 @@
-apiVersion: apps/v1
-kind: DaemonSet
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: ebpf-xdp-deploy
+  name: ebpf-xdp-install
   namespace: ebpf-xdp-install
-  labels:
-    app: ebpf-xdp-deploy
 spec:
-  selector:
-    matchLabels:
-      app: ebpf-xdp-deploy
   template:
-    metadata:
-      labels:
-        app: ebpf-xdp-deploy
-      name: ebpf-xdp-deploy
     spec:
-      nodeSelector:
-        kubernetes.azure.com/os-sku: Windows2022
-      securityContext:
-        windowsOptions:
-          hostProcess: true
-          runAsUserName: "NT AUTHORITY\\SYSTEM"
-      hostNetwork: true
       containers:
-      - name: ebpf-xdp-deploy
+      - name: ebpf-xdp-install-container
         image: mcr.microsoft.com/windows/servercore:ltsc2022
         command:
         - powershell.exe
         - -command
         - |
-          $binaryDir = "C:\binaries"
+          # Enable Test Signing mode on the node
+          $binaryDir = "C:\\binaries"
           if (!(Test-Path -Path $binaryDir)) {
-            New-Item -ItemType Directory -Path $binaryDir
+              New-Item -ItemType Directory -Path $binaryDir
           }
 
           $ProgressPreference = 'SilentlyContinue'
           # Download eBPF-for-Windows.
-          $packageEbpfUrl = "https://github.com/microsoft/ebpf-for-windows/releases/download/Release-v0.20.0/Build-x64-native-only-NativeOnlyRelease.zip"
-          Invoke-WebRequest -Uri $packageEbpfUrl -OutFile "$(binaryDir)\Build-x64-native-only-NativeOnlyRelease.zip"
-          Expand-Archive -Path "$(binaryDir)\Build-x64-native-only-NativeOnlyRelease.zip" -DestinationPath "$(binaryDir)\Build-x64-native-only-NativeOnlyRelease\msi"
-          copy "$(binaryDir)\Build-x64-native-only-NativeOnlyRelease\msi\Build-x64-native-only NativeOnlyRelease\*.msi" $(binaryDir)
+          $packageEbpfUrl = "https://github.com/microsoft/ebpf-for-windows/releases/download/Release-v0.18.0/Build-x64-native-only-NativeOnlyRelease.zip"
+          Invoke-WebRequest -Uri $packageEbpfUrl -OutFile "$binaryDir\\Build-x64-native-only-NativeOnlyRelease.zip"
+          Expand-Archive -Path "$binaryDir\\Build-x64-native-only-NativeOnlyRelease.zip" -DestinationPath "$binaryDir\\Build-x64-native-only-NativeOnlyRelease\\msi"
+          copy "$binaryDir\\Build-x64-native-only-NativeOnlyRelease\\msi\\Build-x64-native-only NativeOnlyRelease\\*.msi" $binaryDir
 
-          Write-Host "EBPF Downloaded"
+          # Download XDP-for-Windows.
+          $packageXdpUrl = "https://github.com/microsoft/xdp-for-windows/releases/download/v1.1.0%2Bbed474a/bin_Release_x64.zip"
+          Invoke-WebRequest -Uri $packageXdpUrl -OutFile "$binaryDir\\bin_Release_x64.zip"
+          Expand-Archive -Path "$binaryDir\\bin_Release_x64.zip" -DestinationPath "$binaryDir\\bin_Release_x64"
+          copy "$binaryDir\\bin_Release_x64\\amd64fre\\xdp.cer" $binaryDir
 
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          privileged: true
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.azure.com/mode
-                operator: In
-                values:
-                - user
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - windows
+          Invoke-WebRequest -Uri "https://github.com/microsoft/xdp-for-windows/releases/download/v1.1.0%2Bbed474a/xdp-for-windows.1.1.0.msi" -OutFile "$binaryDir\\xdp-for-windows.1.1.0.msi"
+
+          tree /f $binaryDir
+
+          $installPath = ($pwd).Drive.Name + ":\ebpf-for-windows"
+          Write-Output "Installing eBPF for Windows"
+          Start-Process msiexec.exe -Wait -ArgumentList "/i eBPF-for-Windows.msi INSTALLFOLDER=$installPath ADDLOCAL=eBPF_Runtime_Components /qn"
+          Write-Output "eBPF for Windows installed"
+          sc.exe query ebpfcore
+          sc.exe query netebpfext
+          copy "$installPath\\ebpfapi.dll" $binaryDir
+          dir $binaryDir
+
+          $installPath = ($pwd).Drive.Name + ":\xdp-for-windows"
+          Write-Output "Installing XDP for Windows"
+          CertUtil.exe -addstore Root xdp.cer
+          CertUtil.exe -addstore TrustedPublisher xdp.cer
+          Start-Process msiexec.exe -Wait -ArgumentList "/i xdp-for-windows.1.1.0.msi INSTALLFOLDER=$installPath /qn"
+          sc.exe query xdp
+          reg.exe add HKLM\\SYSTEM\\CurrentControlSet\\Services\\xdp\\Parameters /v XdpEbpfEnabled /d 1 /t REG_DWORD /f
+          net.exe stop xdp
+          net.exe start xdp
+          Write-Output "XDP for Windows installed"
+          dir $installPath
+
+      restartPolicy: Never
+      nodeSelector:
+        kubernetes.io/os: windows
+      securityContext:
+        windowsOptions:
+          runAsUserName: "NT AUTHORITY\\SYSTEM"
+  backoffLimit: 0

@@ -6,24 +6,21 @@ metadata:
 spec:
   template:
     spec:
-      containers:
-      - name: enable-test-signing-container
-        image: mcr.microsoft.com/windows/servercore:ltsc2022  # Add a base image
-        command:
-        - powershell.exe
-        - -command
-        - |
-          # Enable Test Signing mode on the node
-          bcdedit /set testsigning on
-          bcdedit /set nointegritychecks off
-          Write-Host "Test-Signing enabled. System will restart now."
-
-          # Request system reboot
-          Restart-Computer -Force
-      restartPolicy: Never
+      hostNetwork: true  # Required for HostProcess
       nodeSelector:
         kubernetes.io/os: windows
       securityContext:
         windowsOptions:
+          hostProcess: true
           runAsUserName: "NT AUTHORITY\\SYSTEM"
-  backoffLimit: 0
+      containers:
+      - name: enable-test-signing-container
+        image: mcr.microsoft.com/windows/servercore:ltsc2022
+        command:
+        - powershell.exe
+        - -command
+        - |
+          Write-Host "Test-Signing enabled."
+          bcdedit /set testsigning on
+          Start-Sleep -Seconds 5
+          shutdown.exe /r /t 5 /f
