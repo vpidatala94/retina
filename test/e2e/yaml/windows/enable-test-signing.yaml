@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: enable-test-signing
+  namespace: default
+spec:
+  template:
+    spec:
+      hostNetwork: true  # Required for HostProcess
+      nodeSelector:
+        kubernetes.io/os: windows
+      securityContext:
+        windowsOptions:
+          hostProcess: true
+          runAsUserName: "NT AUTHORITY\\SYSTEM"
+      restartPolicy: Never
+      containers:
+      - name: enable-test-signing
+        image: mcr.microsoft.com/windows/servercore:ltsc2022
+        command:
+        - powershell.exe
+        - -command
+        - |
+          Write-Host 'Enable test signing'
+          bcdedit /set testsigning on
+          Start-Sleep -Seconds 5
+          Restart-Computer localhost
