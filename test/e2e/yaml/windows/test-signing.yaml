@@ -13,14 +13,11 @@ spec:
         windowsOptions:
           hostProcess: true
           runAsUserName: "NT AUTHORITY\\SYSTEM"
+      restartPolicy: Never
       containers:
-      - name: enable-test-signing-container
+      - name: enable-test-signing
         image: mcr.microsoft.com/windows/servercore:ltsc2022
         command:
         - powershell.exe
         - -command
-        - |
-          Write-Host "Test-Signing enabled."
-          bcdedit /set testsigning on
-          Start-Sleep -Seconds 5
-          shutdown.exe /r /t 5 /f
+        - "Write-Host 'Enable test signing'; bcdedit /set testsigning on; Start-Sleep -Seconds 5"
