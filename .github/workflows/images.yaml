@@ -112,7 +112,7 @@ jobs:
               BUILDX_ACTION=--push
           fi
         env:
-          IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
+          IS_MERGE_GROUP: ${{ github.event_name != 'merge_group' }}
 
   operator-images:
     name: Build Operator Images
