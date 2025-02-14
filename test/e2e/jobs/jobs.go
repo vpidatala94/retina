@@ -193,7 +193,6 @@ func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, test
 		job.AddScenario(windows.ValidateCiliumBasicMetric())
 	}
 
-
 	job.AddStep(&kubernetes.EnsureStableComponent{
 		PodNamespace:           common.KubeSystemNamespace,
 		LabelSelector:          "k8s-app=retina",
