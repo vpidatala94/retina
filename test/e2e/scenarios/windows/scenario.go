@@ -18,3 +18,17 @@ func ValidateWindowsBasicMetric() *types.Scenario {
 	}
 	return types.NewScenario(name, steps...)
 }
+
+func ValidateCiliumBasicMetric() *types.Scenario {
+	name := "Cilium Windows Metrics"
+	steps := []*types.StepWrapper{
+		{
+			Step: &ValidateCiliumMetric{
+				KubeConfigFilePath:       "./test.pem",
+				RetinaDaemonSetNamespace: common.KubeSystemNamespace,
+				RetinaDaemonSetName:      "retina-agent-win",
+			},
+		},
+	}
+	return types.NewScenario(name, steps...)
+}
