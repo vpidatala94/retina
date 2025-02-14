@@ -20,4 +20,8 @@ spec:
         command:
         - powershell.exe
         - -command
-        - "Write-Host 'Enable test signing'; bcdedit /set testsigning on; Start-Sleep -Seconds 5"
+        - |
+          Write-Host 'Enable test signing'
+          bcdedit /set testsigning on
+          Start-Sleep -Seconds 5
+          Restart-Computer localhost
