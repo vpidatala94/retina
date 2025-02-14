@@ -35,6 +35,7 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
+        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -45,12 +46,18 @@ jobs:
         run: |
           set -euo pipefail
           echo "TAG=$(make version)" >> $GITHUB_ENV
-          az acr login -n ${{ vars.ACR_NAME }}
-          make retina-image \
-            IMAGE_NAMESPACE=${{ github.repository }} \
-            PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-            IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
-            BUILDX_ACTION=--push
+          if [ "$IS_MERGE_GROUP" == "true" ]; then
+            az acr login -n ${{ vars.ACR_NAME }}
+            make retina-image \
+              IMAGE_NAMESPACE=${{ github.repository }} \
+              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
+              IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
+              BUILDX_ACTION=--push
+          else
+            make retina-image \
+              IMAGE_NAMESPACE=${{ github.repository }} \
+              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
+          fi
         env:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
@@ -78,6 +85,7 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
+        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -101,6 +109,7 @@ jobs:
               IMAGE_NAMESPACE=${{ github.repository }} \
               PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
               WINDOWS_YEARS=${{ matrix.year }}
+              BUILDX_ACTION=--push
           fi
         env:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
@@ -128,6 +137,7 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
+        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -176,6 +186,7 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
+        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -224,6 +235,7 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
+        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -250,7 +262,7 @@ jobs:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
   manifests:
-    if: ${{ success('retina-images') && success('retina-win-images') && success('operator-images') && success('retina-shell-images')}}
+    if: ${{ github.event_name == 'merge_group' && success('retina-images') && success('retina-win-images') && success('operator-images') && success('retina-shell-images')}}
     name: Generate Manifests
     runs-on: ubuntu-latest
     needs:
@@ -289,6 +301,7 @@ jobs:
           IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
 
   e2e:
+    if: ${{ github.event_name == 'merge_group' && success('manifests')}}
     name: Run E2E Tests
     runs-on: ubuntu-latest
     needs: [manifests]
@@ -305,6 +318,7 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
+        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
