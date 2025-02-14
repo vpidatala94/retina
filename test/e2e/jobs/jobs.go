@@ -190,6 +190,7 @@ func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, test
 		}
 
 		job.AddScenario(windows.ValidateWindowsBasicMetric())
+		job.AddScenario(windows.ValidateCiliumBasicMetric())
 	}
 
 
