@@ -97,20 +97,6 @@ jobs:
           set -euo pipefail
           echo "TAG=$(make version)" >> $GITHUB_ENV
           az acr login -n ${{ vars.ACR_NAME }}
-          if [ "$IS_MERGE_GROUP" == "true" ]; then
-            make retina-image-win \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-              IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
-              WINDOWS_YEARS=${{ matrix.year }} \
-              BUILDX_ACTION=--push
-          else
-            make retina-image-win \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-              WINDOWS_YEARS=${{ matrix.year }}
-              BUILDX_ACTION=--push
-          fi
         env:
           IS_MERGE_GROUP: ${{ github.event_name != 'merge_group' }}
 
@@ -150,6 +136,11 @@ jobs:
           echo "TAG=$(make version)" >> $GITHUB_ENV
           if [ "$IS_MERGE_GROUP" == "true" ]; then
             az acr login -n ${{ vars.ACR_NAME }}
+            make retina-operator-image \
+              IMAGE_NAMESPACE=${{ github.repository }} \
+              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
+              IMAGE_REGISTRY=${{ vars.ACR_NAME }} \
+              BUILDX_ACTION=--push
           else
             make retina-operator-image \
               IMAGE_NAMESPACE=${{ github.repository }} \
