@@ -35,7 +35,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -59,7 +58,7 @@ jobs:
               PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
           fi
         env:
-          IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
+          IS_MERGE_GROUP: ${{ github.event_name != 'merge_group' }}
 
   retina-win-images:
     name: Build Agent Windows Images
@@ -85,7 +84,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name != 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -137,7 +135,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -161,7 +158,7 @@ jobs:
               PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
           fi
         env:
-          IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
+          IS_MERGE_GROUP: ${{ github.event_name != 'merge_group' }}
 
   retina-shell-images:
     name: Build Retina Shell Images
@@ -186,7 +183,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -210,7 +206,7 @@ jobs:
               PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
           fi
         env:
-          IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
+          IS_MERGE_GROUP: ${{ github.event_name != 'merge_group' }}
 
   kubectl-retina-images:
     name: Build Kubectl Retina Images
@@ -259,7 +255,7 @@ jobs:
               PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
           fi
         env:
-          IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
+          IS_MERGE_GROUP: ${{ github.event_name != 'merge_group' }}
 
   manifests:
     if: ${{ github.event_name == 'merge_group' && success('retina-images') && success('retina-win-images') && success('operator-images') && success('retina-shell-images')}}
@@ -301,7 +297,6 @@ jobs:
           IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
 
   e2e:
-    if: ${{ github.event_name == 'merge_group' && success('manifests')}}
     name: Run E2E Tests
     runs-on: ubuntu-latest
     needs: [manifests]
