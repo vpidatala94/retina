@@ -1,9 +1,9 @@
 package kubernetes
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -44,12 +44,13 @@ func (a *ApplyYamlConfig) Run() error {
 		return fmt.Errorf("error creating dynamic client: %w", err)
 	}
 
-	yamlFile, err := ioutil.ReadFile(a.YamlFilePath)
+	yamlFile, err := os.ReadFile(a.YamlFilePath)
 	if err != nil {
 		return fmt.Errorf("error reading YAML file: %w", err)
 	}
 
-	decoder := yaml.NewYAMLOrJSONDecoder(yamlFile, 100)
+	reader := bytes.NewReader(yamlFile)
+	decoder := yaml.NewYAMLOrJSONDecoder(reader, 100)
 	var rawObj unstructured.Unstructured
 	if err := decoder.Decode(&rawObj); err != nil {
 		return fmt.Errorf("error decoding YAML file: %w", err)
