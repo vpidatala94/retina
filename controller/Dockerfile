@@ -116,11 +116,6 @@ COPY --from=tools /lib/ /lib
 COPY --from=tools /usr/lib/ /usr/lib
 ENTRYPOINT ["./retina/initretina"]
 
-# Build Event Writer
-RUN if [ $PLATFORM = "windows/amd64" ] ; then \
-    msbuild MySolution.sln /p:Configuration=Release \
-    fi
-
 # agent final image
 # mcr.microsoft.com/cbl-mariner/distroless/minimal:2.0
 # mcr.microsoft.com/cbl-mariner/distroless/minimal@sha256:63a0a70ceaa1320bc6eb98b81106667d43e46b674731ea8d28e4de1b87e0747f
