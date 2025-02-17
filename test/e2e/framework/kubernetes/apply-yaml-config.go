@@ -11,8 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -34,15 +35,22 @@ func (a *ApplyYamlConfig) Run() error {
 		return fmt.Errorf("error building kubeconfig: %w", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return fmt.Errorf("error creating Kubernetes client: %w", err)
-	}
-
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("error creating dynamic client: %w", err)
 	}
+
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return fmt.Errorf("error creating discovery client: %w", err)
+	}
+
+	resources, err := restmapper.GetAPIGroupResources(discoveryClient)
+	if err != nil {
+		return fmt.Errorf("error getting API group resources: %w", err)
+	}
+
+	mapper := restmapper.NewDiscoveryRESTMapper(resources)
 
 	yamlFile, err := os.ReadFile(a.YamlFilePath)
 	if err != nil {
@@ -56,20 +64,26 @@ func (a *ApplyYamlConfig) Run() error {
 		return fmt.Errorf("error decoding YAML file: %w", err)
 	}
 
+	// Get GroupVersionResource to invoke the dynamic client
 	gvk := rawObj.GroupVersionKind()
-	mapping, err := clientset.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
+	restMapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
 		return fmt.Errorf("error getting REST mapping: %w", err)
 	}
+	gvr := restMapping.Resource
 
-	resourceInterface := dynamicClient.Resource(mapping.Resource).Namespace(rawObj.GetNamespace())
-	_, err = resourceInterface.Create(ctx, &rawObj, metav1.CreateOptions{})
+	// Apply the YAML document
+	namespace := rawObj.GetNamespace()
+	if len(namespace) == 0 {
+		namespace = "default"
+	}
+	applyOpts := metav1.ApplyOptions{FieldManager: "kube-apply"}
+	_, err = dynamicClient.Resource(gvr).Namespace(namespace).Apply(ctx, rawObj.GetName(), &rawObj, applyOpts)
 	if err != nil {
-		return fmt.Errorf("error applying YAML file: %w", err)
+		return fmt.Errorf("apply error: %w", err)
 	}
 
 	log.Printf("applied YAML file: %s\n", a.YamlFilePath)
-
 	return nil
 }
 
