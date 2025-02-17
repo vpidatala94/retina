@@ -57,11 +57,8 @@ func TestE2ERetina(t *testing.T) {
 	createTestInfra := types.NewRunner(t, jobs.CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath, *common.CreateInfra))
 	createTestInfra.Run(ctx)
 
-	// Enable Test-Signing On
-	enableTestSigning := types.NewRunner(t, jobs.EnableTestSigningOn(kubeConfigFilePath))
-	enableTestSigning.Run(ctx)
 	// Install Ebpf and XDP
-	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfAndXDP(kubeConfigFilePath))
+	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
 	installEbpfAndXDP.Run(ctx)
 
 	t.Cleanup(func() {

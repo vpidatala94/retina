@@ -20,9 +20,16 @@ spec:
         - -command
         - |
           git clone https://github.com/your-org/retina.git C:\retina;
-          cd C:\retina;
-          .\scripts\WindowsCilium.ps1
-
+          & C:\retina\scripts\install-ebpf-xdp.ps1
+          while ($true) { Start-Sleep -Seconds 2147483; }
+      readinessProbe:
+          exec:
+            command:
+            - powershell.exe
+            - -command
+            - Test-Path C:\install-ebpf-xdp-probe-ready
+          initialDelaySeconds: 10
+          periodSeconds: 5
       nodeSelector:
         kubernetes.io/os: windows
       securityContext:

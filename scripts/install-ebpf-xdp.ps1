@@ -605,6 +605,9 @@ Function Install-WindowsCilium
 
       If(-Not (Install-XDP -LocalPath:"$($LocalPath)")) {Throw}
 
+      # Create the probe ready file
+      New-Item -Path "C:\install-ebpf-xdp-probe-ready" -ItemType File -Force
+
       Write-Host -Object:'Restarting'
 
       Start-Sleep -Seconds:5

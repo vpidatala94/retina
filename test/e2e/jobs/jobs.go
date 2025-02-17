@@ -106,17 +106,6 @@ func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
 	return job
 }
 
-func EnableTestSigningOn(kubeConfigFilePath string) *types.Job {
-	job := types.NewJob("Enable test signing on")
-
-	job.AddStep(&kubernetes.ApplyYamlConfig{
-		KubeConfigFilePath: kubeConfigFilePath,
-		YamlFilePath:       "test/e2e/yaml/windows/enable-test-signing.yaml",
-	}, nil)
-
-	return job
-}
-
 func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
 	job := types.NewJob("Install ebpf and xdp")
 
