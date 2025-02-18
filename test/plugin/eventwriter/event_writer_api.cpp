@@ -187,7 +187,7 @@ int main() {
         }
     }
 
-    std::cout << "All programs attached successfully." << std::endl;
+    printf("All programs attached successfully.\n");
     unload_programs_detach()
     return 0;
 }

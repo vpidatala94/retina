@@ -74,7 +74,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(SolutionDir)packages\eBPF-for-Windows.x64.0.20.0\build\native\lib;$(SolutionDir)packages\XDP-for-Windows.1.1.0\build\native\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ebpfapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>iphlpapi.lib;ebpfapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
@@ -88,7 +88,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)packages\eBPF-for-Windows.x64.0.20.0\build\native\include;$(SolutionDir)packages\XDP-for-Windows.1.1.0\build\native\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)packages\eBPF-for-Windows.x64.0.20.0\build\native\include;$(SolutionDir)packages\XDP-for-Windows.1.1.0\build\native\include;C:\Users\vpidatala\Code\vinodRetina\retina\test\plugin\eventwriter\packages\Microsoft.Windows.SDK.CPP.10.0.26100.2454\c\Include\10.0.26100.0\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -98,7 +98,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(SolutionDir)packages\eBPF-for-Windows.x64.0.20.0\build\native\lib;$(SolutionDir)packages\XDP-for-Windows.1.1.0\build\native\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ebpfapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ebpfapi.lib;iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
