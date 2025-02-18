@@ -35,4 +35,3 @@ spec:
       securityContext:
         windowsOptions:
           runAsUserName: "NT AUTHORITY\\SYSTEM"
-  backoffLimit: 5
