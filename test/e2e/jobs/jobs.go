@@ -108,7 +108,9 @@ func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
 
 func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
 	job := types.NewJob("Install ebpf and xdp")
-	job.AddStep(&kubernetes.CreateNamespace{"ebpf-xdp-install", kubeConfigFilePath}, nil)
+	job.AddStep(&kubernetes.CreateNamespace{
+		Namespace:          "ebpf-xdp-install",
+		KubeConfigFilePath: kubeConfigFilePath}, nil)
 
 	job.AddStep(&kubernetes.ApplyYamlConfig{
 		KubeConfigFilePath: kubeConfigFilePath,

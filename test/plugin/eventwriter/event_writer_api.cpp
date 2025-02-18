@@ -1,6 +1,7 @@
 #include <bpf/libbpf.h>
 #include <bpf/bpf.h>
 #include <windows.h>
+#include <iphlpapi.h>
 #include <vector>
 #include "event_writer.h"
 #include "event_writer_util.h"
@@ -166,7 +167,7 @@ std::vector<int> get_interface_indices() {
             interface_indices.push_back(adapter->IfIndex);
         }
     } else {
-        std::cerr << "Failed to get network adapters" << std::endl;
+        fprintf(stderr, "Failed to get network adapters");
     }
 
     return interface_indices;
