@@ -19,8 +19,8 @@ spec:
         - powershell.exe
         - -command
         - |
-          git clone https://github.com/your-org/retina.git C:\retina;
-          & C:\retina\scripts\install-ebpf-xdp.ps1
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/scripts/install-ebpf-xdp.ps1" -OutFile "C:\install-ebpf-xdp.ps1";
+          & C:\install-ebpf-xdp.ps1;
           while ($true) { Start-Sleep -Seconds 2147483; }
       readinessProbe:
           exec:
