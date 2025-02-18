@@ -8,7 +8,7 @@
 std::vector<std::pair<int, struct bpf_link*>> link_list;
 bpf_object* obj = NULL;
 
-extern "C" __declspec(dllexport) DWORD
+int
 set_filter(struct filter* flt) {
     uint8_t key = 0;
     int map_flt_fd = 0;
@@ -26,7 +26,7 @@ set_filter(struct filter* flt) {
     return 0;
 }
 
-extern "C" __declspec(dllexport)  DWORD
+int
 check_five_tuple_exists(struct five_tuple* fvt) {
     int map_evt_req_fd;
     int value = 0;
@@ -42,7 +42,7 @@ check_five_tuple_exists(struct five_tuple* fvt) {
     return 0;
 }
 
-extern "C" __declspec(dllexport)  DWORD
+int
 attach_program_to_interface(int ifindx) {
     struct bpf_program* prg = bpf_object__find_program_by_name(obj, "event_writer");
     bpf_link* link = NULL;
@@ -61,7 +61,7 @@ attach_program_to_interface(int ifindx) {
     return 0;
 }
 
-extern "C" __declspec(dllexport)  DWORD
+int
 pin_maps_load_programs(void) {
     struct bpf_program* prg = NULL;
     struct bpf_map *map_ev, *map_met, *map_fvt, *map_flt;
@@ -133,7 +133,7 @@ pin_maps_load_programs(void) {
 }
 
 // Function to unload programs and detach
-extern "C" __declspec(dllexport) DWORD
+int
 unload_programs_detach() {
     for (auto it = link_list.begin(); it != link_list.end(); it ++) {
         auto ifidx = it->first;
@@ -150,6 +150,13 @@ unload_programs_detach() {
     if (obj != NULL) {
         bpf_object__close(obj);
     }
+
+    return 0;
+}
+
+
+int main(void) {
+
 
     return 0;
 }

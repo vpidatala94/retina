@@ -11,6 +11,7 @@ import (
 
 	"github.com/microsoft/retina/test/e2e/common"
 	"github.com/microsoft/retina/test/e2e/framework/helpers"
+	"github.com/microsoft/retina/test/e2e/framework/kubernetes"
 	"github.com/microsoft/retina/test/e2e/framework/types"
 	jobs "github.com/microsoft/retina/test/e2e/jobs"
 	"github.com/stretchr/testify/require"
@@ -58,6 +59,7 @@ func TestE2ERetina(t *testing.T) {
 	createTestInfra.Run(ctx)
 
 	// Install Ebpf and XDP
+	job.AddStep(&kubernetes.CreateNamespace{"ebpf-xdp-install", kubeConfigFilePath}, nil)
 	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
 	installEbpfAndXDP.Run(ctx)
 
