@@ -1,12 +1,9 @@
-apiVersion: apps/v1
-kind: DaemonSet
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: ebpf-xdp-install
   namespace: ebpf-xdp-install  # Ensure this namespace exists
 spec:
-  selector:
-    matchLabels:
-      name: ebpf-xdp-install
   template:
     metadata:
       labels:
@@ -19,6 +16,7 @@ spec:
           - powershell.exe
           - -command
           - |
+            echo "Downloading install-ebpf-xdp.ps1"
             Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/scripts/install-ebpf-xdp.ps1" -OutFile "C:\install-ebpf-xdp.ps1";
             & C:\install-ebpf-xdp.ps1;
             # Instead of infinite sleep, consider a more specific wait or loop
@@ -31,8 +29,12 @@ spec:
               - Test-Path C:\install-ebpf-xdp-probe-ready
           initialDelaySeconds: 10
           periodSeconds: 5
+      restartPolicy: Never
+      hostNetwork: true  # Required for HostProcess
       nodeSelector:
         kubernetes.io/os: windows
       securityContext:
         windowsOptions:
-          runAsUserName: "NT AUTHORITY\\SYSTEM"
+          hostProcess: true
+          runAsUserName: "Administrator"
+  backoffLimit: 4
