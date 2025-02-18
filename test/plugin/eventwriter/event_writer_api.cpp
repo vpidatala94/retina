@@ -154,9 +154,39 @@ unload_programs_detach() {
     return 0;
 }
 
+std::vector<int> get_interface_indices() {
+    std::vector<int> interface_indices;
+    ULONG buffer_size = 0;
+    GetAdaptersAddresses(AF_UNSPEC, 0, NULL, NULL, &buffer_size);
+    std::vector<BYTE> buffer(buffer_size);
+    PIP_ADAPTER_ADDRESSES adapters = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data());
 
-int main(void) {
+    if (GetAdaptersAddresses(AF_UNSPEC, 0, NULL, adapters, &buffer_size) == NO_ERROR) {
+        for (PIP_ADAPTER_ADDRESSES adapter = adapters; adapter != NULL; adapter = adapter->Next) {
+            interface_indices.push_back(adapter->IfIndex);
+        }
+    } else {
+        std::cerr << "Failed to get network adapters" << std::endl;
+    }
 
+    return interface_indices;
+}
 
+int main() {
+    int ret;
+    ret = pin_maps_load_programs();
+    if (ret != 0) {
+        return ret;
+    }
+    std::vector<int> interface_indices = get_interface_indices();
+    for (int ifindx : interface_indices) {
+        ret = attach_program_to_interface(ifindx);
+        if (ret != 0) {
+            return ret;
+        }
+    }
+
+    std::cout << "All programs attached successfully." << std::endl;
+    unload_programs_detach()
     return 0;
 }
