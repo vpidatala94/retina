@@ -390,12 +390,12 @@ Function Install-eBPF
    Try
    {
       Write-Host 'Installing extended Berkley Packet Filter for Windows'
-      If(-Not (Assert-TestSigningIsEnabled -Silent))
+      If(-Not (Assert-TestSigningIsEnabled))
       {
          If(-Not (Enable-TestSigning -Reboot)) { Throw }
       }
 
-      If(Assert-SoftwareInstalled -SoftwareName:'ebpfCore')
+      If(Assert-SoftwareInstalled -ServiceName:"eBPFCore")
       {
          Write-Host 'extended Berkley Packet Filter for Windows is already installed'
          return $isSuccess
@@ -417,7 +417,7 @@ Function Install-eBPF
          Throw
       }
 
-      $isSuccess = Assert-SoftwareInstalled -SoftwareName:'eBPF for Windows'
+      $isSuccess = Assert-SoftwareInstalled -ServiceName:"eBPFCore"
    }
    Catch
    {
@@ -474,9 +474,9 @@ Function Install-XDP
       Invoke-WebRequest -Uri $packageXdpUrl -OutFile "$LocalPath\\bin_Release_x64.zip"
       Expand-Archive -Path "$LocalPath\\bin_Release_x64.zip" -DestinationPath "$LocalPath\\bin_Release_x64"
       copy "$LocalPath\\bin_Release_x64\\amd64fre\\xdp.cer" $LocalPath
-      CertUtil.exe -addstore Root $LocalPath\xdp.cer
-      CertUtil.exe -addstore TrustedPublisher $LocalPath\xdp.cer
-      Start-Process -FilePath:"$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i $($LocalPath)\xdp-for-windows.1.1.0.msi", '/qn') -PassThru | Wait-Process
+      CertUtil.exe -addstore Root xdp.cer
+      CertUtil.exe -addstore TrustedPublisher xdp.cer
+      Start-Process -FilePath:"$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i $LocalPath\bin_Release_x64\xdp-for-windows.1.1.0.msi", '/qn') -PassThru | Wait-Process
       sc.exe query xdp
       reg.exe add HKLM\\SYSTEM\\CurrentControlSet\\Services\\xdp\\Parameters /v XdpEbpfEnabled /d 1 /t REG_DWORD /f
       net.exe stop xdp
