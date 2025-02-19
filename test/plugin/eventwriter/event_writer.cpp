@@ -53,22 +53,36 @@ int pin_map(const char* pin_path, bpf_map* map) {
     return 0;
 }
 
-std::vector<int> get_interface_indices() {
-    std::vector<int> interface_indices;
-    ULONG buffer_size = 0;
-    GetAdaptersAddresses(AF_UNSPEC, 0, NULL, NULL, &buffer_size);
-    std::vector<BYTE> buffer(buffer_size);
-    PIP_ADAPTER_ADDRESSES adapters = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data());
+std::vector<int> get_physical_interface_indices()
+{
+    std::vector<int> physical_indices;
+    ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
+    ULONG family = AF_UNSPEC;
+    ULONG outBufLen = 0;
+    PIP_ADAPTER_ADDRESSES pAddresses = NULL;
+    PIP_ADAPTER_ADDRESSES pCurrAddresses = NULL;
 
-    if (GetAdaptersAddresses(AF_UNSPEC, 0, NULL, adapters, &buffer_size) == NO_ERROR) {
-        for (PIP_ADAPTER_ADDRESSES adapter = adapters; adapter != NULL; adapter = adapter->Next) {
-            interface_indices.push_back(adapter->IfIndex);
-        }
-    } else {
-        fprintf(stderr, "Failed to get network adapters");
+    // Get the size needed for the buffer
+    if (GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen) == ERROR_BUFFER_OVERFLOW) {
+        pAddresses = (IP_ADAPTER_ADDRESSES*)malloc(outBufLen);
     }
 
-    return interface_indices;
+    // Get the actual data
+    if (GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen) == NO_ERROR) {
+        pCurrAddresses = pAddresses;
+        while (pCurrAddresses) {
+            if (pCurrAddresses->IfType == IF_TYPE_ETHERNET_CSMACD && pCurrAddresses->OperStatus == IfOperStatusUp) {
+                physical_indices.push_back(pCurrAddresses->IfIndex);
+            }
+            pCurrAddresses = pCurrAddresses->Next;
+        }
+    }
+
+    if (pAddresses) {
+        free(pAddresses);
+    }
+
+    return physical_indices;
 }
 
 int
@@ -191,7 +205,7 @@ int main(int argc, char* argv[]) {
     if (ret != 0) {
         return ret;
     }
-    std::vector<int> interface_indices = get_interface_indices();
+    std::vector<int> interface_indices = get_physical_interface_indices();
     for (int ifindx : interface_indices) {
         ret = attach_program_to_interface(ifindx);
         if (ret != 0) {
