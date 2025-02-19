@@ -211,7 +211,7 @@ Function Disable-TestSigning
 
       Write-Host -Object:"`tDisabling Test Signing"
 
-      If(Assert-TestSigningIsEnabled -Silent)
+      If(Assert-TestSigningIsEnabled)
       {
          Start-Process -FilePath:"$($env:WinDir)\System32\BCDEdit.exe" -ArgumentList @('/Set TestSigning Off') -PassThru | Wait-Process
 
