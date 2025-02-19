@@ -1,10 +1,11 @@
+#include <winsock2.h>
+#include <iphlpapi.h>
 #include <bpf/libbpf.h>
 #include <bpf/bpf.h>
-#include <windows.h>
-#include <iphlpapi.h>
+
 #include <vector>
 #include "event_writer.h"
-#include "event_writer_util.h"
+#include <vector>
 
 std::vector<std::pair<int, struct bpf_link*>> link_list;
 bpf_object* obj = NULL;
@@ -27,20 +28,47 @@ set_filter(struct filter* flt) {
     return 0;
 }
 
-int
-check_five_tuple_exists(struct five_tuple* fvt) {
-    int map_evt_req_fd;
-    int value = 0;
+int pin_map(const char* pin_path, bpf_map* map) {
+    int map_fd = 0;
+    // Attempt to open the pinned map
+    map_fd = bpf_obj_get(pin_path);
+    if (map_fd < 0) {
+        // Get the file descriptor of the map
+        map_fd = bpf_map__fd(map);
 
-    map_evt_req_fd = bpf_obj_get(FIVE_TUPLE_MAP_PIN_PATH);
-    if (map_evt_req_fd < 0) {
-        return 1;
-    }
-    if (bpf_map_lookup_elem(map_evt_req_fd, fvt, &value) != 0) {
-        return 1;
-    }
+        if (map_fd < 0) {
+            fprintf(stderr, "%s - failed to get map file descriptor\n", __FUNCTION__);
+            return 1;
+        }
 
+        if (bpf_obj_pin(map_fd, pin_path) < 0) {
+            fprintf(stderr, "%s - failed to pin map to %s\n", pin_path, __FUNCTION__);
+            return 1;
+        }
+
+        printf("%s - map successfully pinned at %s\n", pin_path, __FUNCTION__);
+    } else {
+        printf("%s -pinned map found at %s\n", pin_path, __FUNCTION__);
+    }
     return 0;
+}
+
+std::vector<int> get_interface_indices() {
+    std::vector<int> interface_indices;
+    ULONG buffer_size = 0;
+    GetAdaptersAddresses(AF_UNSPEC, 0, NULL, NULL, &buffer_size);
+    std::vector<BYTE> buffer(buffer_size);
+    PIP_ADAPTER_ADDRESSES adapters = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data());
+
+    if (GetAdaptersAddresses(AF_UNSPEC, 0, NULL, adapters, &buffer_size) == NO_ERROR) {
+        for (PIP_ADAPTER_ADDRESSES adapter = adapters; adapter != NULL; adapter = adapter->Next) {
+            interface_indices.push_back(adapter->IfIndex);
+        }
+    } else {
+        fprintf(stderr, "Failed to get network adapters");
+    }
+
+    return interface_indices;
 }
 
 int
@@ -155,26 +183,10 @@ unload_programs_detach() {
     return 0;
 }
 
-std::vector<int> get_interface_indices() {
-    std::vector<int> interface_indices;
-    ULONG buffer_size = 0;
-    GetAdaptersAddresses(AF_UNSPEC, 0, NULL, NULL, &buffer_size);
-    std::vector<BYTE> buffer(buffer_size);
-    PIP_ADAPTER_ADDRESSES adapters = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data());
-
-    if (GetAdaptersAddresses(AF_UNSPEC, 0, NULL, adapters, &buffer_size) == NO_ERROR) {
-        for (PIP_ADAPTER_ADDRESSES adapter = adapters; adapter != NULL; adapter = adapter->Next) {
-            interface_indices.push_back(adapter->IfIndex);
-        }
-    } else {
-        fprintf(stderr, "Failed to get network adapters");
-    }
-
-    return interface_indices;
-}
-
-int main() {
+int main(int argc, char* argv[]) {
     int ret;
+
+    printf ("Starting event writer\n");
     ret = pin_maps_load_programs();
     if (ret != 0) {
         return ret;
@@ -187,7 +199,7 @@ int main() {
         }
     }
 
-    printf("All programs attached successfully.\n");
-    unload_programs_detach()
+    std::this_thread::sleep_for(std::chrono::minutes(15));
+    unload_programs_detach();
     return 0;
 }
