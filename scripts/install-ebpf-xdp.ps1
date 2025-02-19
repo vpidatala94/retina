@@ -395,7 +395,7 @@ Function Install-eBPF
          If(-Not (Enable-TestSigning -Reboot)) { Throw }
       }
 
-      If(Assert-SoftwareInstalled -SoftwareName:'ebpf-for-windows')
+      If(Assert-SoftwareInstalled -SoftwareName:'ebpfCore')
       {
          Write-Host 'extended Berkley Packet Filter for Windows is already installed'
          return $isSuccess
