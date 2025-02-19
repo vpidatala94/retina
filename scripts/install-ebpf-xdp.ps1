@@ -519,7 +519,7 @@ Function Install-WindowsCilium
    {
       If(Assert-WindowsCiliumIsReady) {
           Write-Host 'Windows Cilium Installed already'
-         return
+          return
       }
 
       Write-Host 'Installing Windows Cilium'
@@ -540,8 +540,11 @@ Function Install-WindowsCilium
 
       Start-Sleep -Seconds:5
 
-      #Restart-Computer
+      If(Assert-WindowsCiliumIsReady) {
+         Throw "Cilium for Windows is not ready"
+      }
 
+      Restart-Computer
    }
    Catch
    {
