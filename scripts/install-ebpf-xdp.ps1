@@ -372,7 +372,7 @@ Function Assert-WindowsCiliumIsReady
 
  .Example
    # Install eBPF for Windows
-   Install-eBPF -LocalPath:"$($env:LocalAppData)\Temp"
+   Install-eBPF -LocalPath:"$env:TEMP"
 #>
 Function Install-eBPF
 {
@@ -382,7 +382,7 @@ Function Install-eBPF
    (
       [Parameter(ParameterSetName='Default',Mandatory=$false)]
       [ValidateScript({Test-Path $_ -PathType:'Container'})]
-      [String] $LocalPath = "$($env:LocalAppData)\Temp"
+      [String] $LocalPath = "$env:TEMP"
    )
 
    [Boolean] $isSuccess = $true
@@ -445,7 +445,7 @@ Function Install-eBPF
 
  .Example
    # Install the eXpress Data Path service
-   Install-XDP -LocalPath:"$($env:LocalAppData)\Temp"
+   Install-XDP -LocalPath:"$env:TEMP"
 #>
 Function Install-XDP
 {
@@ -455,7 +455,7 @@ Function Install-XDP
    (
       [Parameter(ParameterSetName='Default',Mandatory=$false)]
       [ValidateScript({Test-Path $_ -PathType:'Container'})]
-      [String] $LocalPath = "$($env:LocalAppData)\Temp"
+      [String] $LocalPath = "$env:TEMP"
    )
 
    [Boolean] $isSuccess = $true
@@ -652,7 +652,7 @@ Function Uninstall-eBPF
    (
       [Parameter(ParameterSetName='Default',Mandatory=$false)]
       [ValidateScript({Test-Path $_ -PathType:'Container'})]
-      [String] $LocalPath = "$($env:LocalAppData)\Temp"
+      [String] $LocalPath = "$env:TEMP"
    )
 
    Write-Host 'Uninstalling the extended Berkley Packet Filter for Windows'
@@ -746,7 +746,7 @@ Function Uninstall-XDP
    (
       [Parameter(ParameterSetName='Default',Mandatory=$false)]
       [ValidateScript({Test-Path $_ -PathType:'Container'})]
-      [String] $LocalPath = "$($env:LocalAppData)\Temp"
+      [String] $LocalPath = "$env:TEMP"
    )
 
    Write-Host 'Uninstalling eXpress Data Path for Windows'
@@ -839,7 +839,7 @@ Function Uninstall-WindowsCilium
    (
       [Parameter(ParameterSetName='Default',Mandatory=$false)]
       [ValidateScript({Test-Path $_ -PathType:'Container'})]
-      [String] $LocalPath = "$($env:LocalAppData)\Temp",
+      [String] $LocalPath = "$env:TEMP",
 
       [Parameter(ParameterSetName='Default',Mandatory=$false)]
       [Switch] $DisableTestSigning,
