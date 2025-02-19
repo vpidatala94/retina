@@ -476,93 +476,18 @@ Function Install-XDP
       copy "$LocalPath\\bin_Release_x64\\amd64fre\\xdp.cer" $LocalPath
       CertUtil.exe -addstore Root xdp.cer
       CertUtil.exe -addstore TrustedPublisher xdp.cer
-      Start-Process -FilePath:"$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i $LocalPath\bin_Release_x64\xdp-for-windows.1.1.0.msi", '/qn') -PassThru | Wait-Process
+      Invoke-WebRequest -Uri "https://github.com/microsoft/xdp-for-windows/releases/download/v1.1.0%2Bbed474a/xdp-for-windows.1.1.0.msi" -OutFile "$LocalPath\xdp-for-windows.1.1.0.msi"
+      Start-Process -FilePath:"$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i $LocalPath\xdp-for-windows.1.1.0.msi", '/qn') -PassThru | Wait-Process
       sc.exe query xdp
       reg.exe add HKLM\\SYSTEM\\CurrentControlSet\\Services\\xdp\\Parameters /v XdpEbpfEnabled /d 1 /t REG_DWORD /f
       net.exe stop xdp
       net.exe start xdp
       Write-Output "XDP for Windows installed"
-
-      $regValue = New-ItemProperty -Path:'HKLM:\SYSTEM\CurrentControlSet\Services\xdp\Parameters' -Name:'xdpEbpfEnabled' -PropertyType:'DWORD' -Value:1 -Force
-      If($regValue.xdpEbpfEnabled -IEQ 1)
-      {
-         [Object] $state = Get-Service -Name:'XDP'
-
-         For([Byte]$i = 0;
-             $i -ILE 5;
-             $i++)
-         {
-            If($state.Status -IEQ 'Stopped')
-            {
-                Break
-            }
-            Else
-            {
-               If($state.Status -IEQ 'Running')
-               {
-                  Stop-Service -Name:'XDP' -Force
-               }
-               ElseIf($state.Status -IEQ 'StopPending')
-               {
-                  Start-Sleep -Seconds:5
-               }
-               Else
-               {
-                  Write-Error -Message:"XDP service is $($state.status)"
-
-                  Throw
-               }
-            }
-
-            $state = Get-Service -Name:'XDP'
-         }
-
-         For([Byte]$i = 0;
-             $i -ILE 5;
-             $i++)
-         {
-            If($state.Status -IEQ 'Running')
-            {
-                Break
-            }
-            Else
-            {
-               If($state.Status -IEQ 'Stopped')
-               {
-                  Start-Service -Name:'XDP'
-               }
-               ElseIf($state.Status -IEQ 'StartPending')
-               {
-                  Start-Sleep -Seconds:5
-               }
-               Else
-               {
-                  Write-Error -Message:"XDP service is $($state.Status)"
-
-                  Throw
-               }
-            }
-
-
-            $state = Get-Service -Name:'XDP'
-         }
-
-         If(-Not (Assert-SoftwareInstalled -ServiceName:'XDP' -Silent))
-         {
-            Write-Error -Message:"`tXDP service failed to install"
-
-            Throw
-         }
-
-         $isSuccess = Assert-SoftwareInstalled -SoftwareName:'XDP for Windows'
-      }
-      Else
-      {
-        Write-Error -Message:"`tFailed to set regKey"
-      }
-
       Write-Host "Setting SDDL for XDP service"
       xdpcfg.exe SetDeviceSddl "D:P(A;;GA;;;SY)(A;;GA;;;BA)"
+      If(-Not (Assert-SoftwareInstalled -SoftwareName:'XDP for Windows' -Silent)) {
+         Throw
+      }
    }
    Catch
    {
