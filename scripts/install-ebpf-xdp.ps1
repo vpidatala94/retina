@@ -472,7 +472,7 @@ Function Install-XDP
       Write-Host 'Installing eXpress Data Path for Windows'
       $packageXdpUrl = "https://github.com/microsoft/xdp-for-windows/releases/download/v1.1.0%2Bbed474a/bin_Release_x64.zip"
       Invoke-WebRequest -Uri $packageXdpUrl -OutFile "$LocalPath\\bin_Release_x64.zip"
-      Expand-Archive -Path "$LocalPath\\bin_Release_x64.zip" -DestinationPath "$LocalPath\\bin_Release_x64"
+      Expand-Archive -Path "$LocalPath\\bin_Release_x64.zip" -DestinationPath "$LocalPath\\bin_Release_x64" -Force
       copy "$LocalPath\\bin_Release_x64\\amd64fre\\xdp.cer" $LocalPath
       CertUtil.exe -addstore Root xdp.cer
       CertUtil.exe -addstore TrustedPublisher xdp.cer
