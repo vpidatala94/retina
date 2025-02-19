@@ -422,8 +422,8 @@ Function Install-eBPF
    Catch
    {
       $isSuccess = $false
-
-      Uninstall-eBPF -LocalPath:"$($LocalPath)"
+      Write-Host "EBPF install failed : $_"
+      Uninstall-eBPF
    }
 
    Return $isSuccess
@@ -567,8 +567,8 @@ Function Install-XDP
    Catch
    {
       $isSuccess = $false
-
-      Uninstall-XDP -LocalPath:"$($LocalPath)"
+      Write-Host "XDP install failed : $_"
+      Uninstall-XDP
    }
 
    Return $isSuccess
