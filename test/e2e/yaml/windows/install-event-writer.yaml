@@ -18,7 +18,7 @@ spec:
         command:
           - powershell.exe
           - -command
-          - 'echo "Installing event-writer..."; Invoke-WebRequest -Uri "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/bpf_event_writer.sys" -OutFile "C:\\bpf_event_writer.sys"; Invoke-WebRequest -Uri "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/event_writer.exe" -OutFile "C:\\event_writer.exe"; .\event_writer.exe; New-Item -Path "C:\\install-event-writer-probe-ready" -ItemType File -Force; while ($true) { Start-Sleep -Seconds 300; }'
+          - 'echo "Installing event-writer..."; Invoke-WebRequest -Uri "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/bpf_event_writer.sys" -OutFile "C:\\bpf_event_writer.sys"; Invoke-WebRequest -Uri "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/event_writer.exe" -OutFile "C:\\event_writer.exe"; cd C:\\ ; .\event_writer.exe; New-Item -Path "C:\\install-event-writer-probe-ready" -ItemType File -Force; while ($true) { Start-Sleep -Seconds 300; }'
         readinessProbe:
           exec:
             command:

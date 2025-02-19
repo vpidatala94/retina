@@ -50,8 +50,8 @@ func TestE2ERetina(t *testing.T) {
 	rootDir := filepath.Dir(filepath.Dir(cwd))
 
 	chartPath := filepath.Join(rootDir, "deploy", "legacy", "manifests", "controller", "helm", "retina")
-	hubblechartPath := filepath.Join(rootDir, "deploy", "hubble", "manifests", "controller", "helm", "retina")
-	profilePath := filepath.Join(rootDir, "test", "profiles", "advanced", "values.yaml")
+	//hubblechartPath := filepath.Join(rootDir, "deploy", "hubble", "manifests", "controller", "helm", "retina")
+	//profilePath := filepath.Join(rootDir, "test", "profiles", "advanced", "values.yaml")
 	kubeConfigFilePath := filepath.Join(rootDir, "test", "e2e", "test.pem")
 
 	// CreateTestInfra
@@ -71,7 +71,7 @@ func TestE2ERetina(t *testing.T) {
 	time.Sleep(10 * time.Minute)
 
 	// Install Ebpf and XDP
-	installEventWriter := types.NewRunner(t, jobs.installEventWriter(kubeConfigFilePath))
+	installEventWriter := types.NewRunner(t, jobs.InstallEventWriter(kubeConfigFilePath))
 	installEventWriter.Run(ctx)
 
 	time.Sleep(10 * time.Minute)
