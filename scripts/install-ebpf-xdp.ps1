@@ -474,17 +474,18 @@ Function Install-XDP
       Invoke-WebRequest -Uri $packageXdpUrl -OutFile "$LocalPath\\bin_Release_x64.zip"
       Expand-Archive -Path "$LocalPath\\bin_Release_x64.zip" -DestinationPath "$LocalPath\\bin_Release_x64" -Force
       copy "$LocalPath\\bin_Release_x64\\amd64fre\\xdp.cer" $LocalPath
-      CertUtil.exe -addstore Root xdp.cer
-      CertUtil.exe -addstore TrustedPublisher xdp.cer
+      copy "$LocalPath\\bin_Release_x64\\amd64fre\\xdpcfg.exe" $LocalPath
+      CertUtil.exe -addstore Root "$LocalPath\xdp.cer"
+      CertUtil.exe -addstore TrustedPublisher "$LocalPath\xdp.cer"
       Invoke-WebRequest -Uri "https://github.com/microsoft/xdp-for-windows/releases/download/v1.1.0%2Bbed474a/xdp-for-windows.1.1.0.msi" -OutFile "$LocalPath\xdp-for-windows.1.1.0.msi"
       Start-Process -FilePath:"$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i $LocalPath\xdp-for-windows.1.1.0.msi", '/qn') -PassThru | Wait-Process
       sc.exe query xdp
-      reg.exe add HKLM\\SYSTEM\\CurrentControlSet\\Services\\xdp\\Parameters /v XdpEbpfEnabled /d 1 /t REG_DWORD /f
+      reg.exe add "HKLM\SYSTEM\CurrentControlSet\Services\xdp\Parameters" /v XdpEbpfEnabled /d 1 /t REG_DWORD /f
       net.exe stop xdp
       net.exe start xdp
       Write-Output "XDP for Windows installed"
       Write-Host "Setting SDDL for XDP service"
-      xdpcfg.exe SetDeviceSddl "D:P(A;;GA;;;SY)(A;;GA;;;BA)"
+      & "$LocalPath\xdpcfg.exe" SetDeviceSddl "D:P(A;;GA;;;SY)(A;;GA;;;BA)"
       If(-Not (Assert-SoftwareInstalled -SoftwareName:'XDP for Windows' -Silent)) {
          Throw
       }
