@@ -404,7 +404,7 @@ Function Install-eBPF
       Write-Host 'Installing extended Berkley Packet Filter for Windows'
       $ProgressPreference = 'SilentlyContinue'
       # Download eBPF-for-Windows.
-      $packageEbpfUrl = "https://github.com/microsoft/ebpf-for-windows/releases/download/Release-v0.20.0/Build-x64-native-only-NativeOnlyRelease.zip"
+      $packageEbpfUrl = "https://github.com/microsoft/ebpf-for-windows/releases/download/Release-v0.20.0/Build-x64-native-only.NativeOnlyRelease.zip"
       Invoke-WebRequest -Uri $packageEbpfUrl -OutFile "$LocalPath\\Build-x64-native-only-NativeOnlyRelease.zip"
       Expand-Archive -Path "$LocalPath\\Build-x64-native-only-NativeOnlyRelease.zip" -DestinationPath "$LocalPath\\Build-x64-native-only-NativeOnlyRelease\\msi"
       Start-Process -FilePath:"$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i $($LocalPath)\ebpf-for-windows.msi", '/qn', "INSTALLFOLDER=`"$($env:ProgramFiles)\ebpf-for-windows`"", 'ADDLOCAL=eBPF_Runtime_Components') -PassThru | Wait-Process
