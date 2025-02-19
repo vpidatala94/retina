@@ -596,7 +596,7 @@ Function Install-WindowsCilium
 
       Write-Host 'Installing Windows Cilium'
 
-      If(-Not (Assert-TestSigningIsEnabled -Silent))
+      If(-Not (Assert-TestSigningIsEnabled))
       {
          If(-Not (Enable-TestSigning -Reboot)) { Throw }
       }
