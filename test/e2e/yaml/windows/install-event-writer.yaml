@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: install-event-writer-container
-        image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+        image: mcr.microsoft.com/windows/servercore:ltsc2022
         command:
           - powershell.exe
           - -command
