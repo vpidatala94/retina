@@ -395,7 +395,7 @@ Function Install-eBPF
          If(-Not (Enable-TestSigning -Reboot)) { Throw }
       }
 
-      If(Assert-SoftwareInstalled -SoftwareName:'eBPFCore')
+      If(Assert-SoftwareInstalled -SoftwareName:'ebpf-for-windows')
       {
          Write-Host 'extended Berkley Packet Filter for Windows is already installed'
          return $isSuccess
@@ -603,9 +603,9 @@ Function Install-WindowsCilium
          If(-Not (Enable-TestSigning -Reboot)) { Throw }
       }
 
-      If(-Not (Install-eBPF -LocalPath:"$($LocalPath)")) {Throw}
+      If(-Not (Install-eBPF)) {Throw}
 
-      If(-Not (Install-XDP -LocalPath:"$($LocalPath)")) {Throw}
+      If(-Not (Install-XDP)) {Throw}
 
       # Create the probe ready file
       New-Item -Path "C:\install-ebpf-xdp-probe-ready" -ItemType File -Force
