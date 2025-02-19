@@ -87,7 +87,7 @@ std::vector<int> get_physical_interface_indices()
 
 int
 attach_program_to_interface(int ifindx) {
-    printf("%s - Attaching program to interface with ifindex %d\n", ifindx, __FUNCTION__);
+    printf("%s - Attaching program to interface with ifindex %d\n", __FUNCTION__, ifindx);
     struct bpf_program* prg = bpf_object__find_program_by_name(obj, "event_writer");
     bpf_link* link = NULL;
     if (prg == NULL) {
