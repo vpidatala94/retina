@@ -614,7 +614,7 @@ Function Install-WindowsCilium
 
       Start-Sleep -Seconds:5
 
-      Restart-Computer
+      #Restart-Computer
 
    }
    Catch
