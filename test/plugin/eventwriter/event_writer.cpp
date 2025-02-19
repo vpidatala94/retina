@@ -199,7 +199,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::this_thread::sleep_for(std::chrono::minutes(15));
+    //Sleep for 10 minutes
+    Sleep(600000);
     unload_programs_detach();
     return 0;
 }
