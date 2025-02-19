@@ -42,7 +42,7 @@ Function Assert-SoftwareInstalled
          $software = Get-WmiObject -Class:'Win32_Product' | Where-Object -Property:'Name' -like "*$($SoftwareName)*"
 
          If($software -And
-            (-Not [String]::IsNullOrWhiteSpace($Version)))
+            (-Not [String]::IsNullOrWhiteSpace($SoftwareVersion)))
          {
             $software = $software | Where-Object -Property:'Version' -like "*$($SoftwareVersion)*"
          }
@@ -60,7 +60,7 @@ Function Assert-SoftwareInstalled
            $isInstalled = $true
 
            If($ServiceState -And
-              -Not ($state.Staus -INE $ServiceState))
+              -Not ($state.Status -INE $ServiceState))
            {
               Write-Warning -Message:"`t$ServiceName is $$(state.Status)"
            }
@@ -211,7 +211,7 @@ Function Disable-TestSigning
 
       Write-Host -Object:"`tDisabling Test Signing"
 
-      If(Assert-TestSigningIsEnabled)
+      If(Assert-TestSigningIsEnabled -Silent)
       {
          Start-Process -FilePath:"$($env:WinDir)\System32\BCDEdit.exe" -ArgumentList @('/Set TestSigning Off') -PassThru | Wait-Process
 
@@ -389,12 +389,13 @@ Function Install-eBPF
 
    Try
    {
+      Write-Host 'Installing extended Berkley Packet Filter for Windows'
       If(-Not (Assert-TestSigningIsEnabled -Silent))
       {
          If(-Not (Enable-TestSigning -Reboot)) { Throw }
       }
 
-      If(Assert-SoftwareInstalled -SoftwareName:'eBPF for Windows')
+      If(Assert-SoftwareInstalled -SoftwareName:'eBPFCore')
       {
          Write-Host 'extended Berkley Packet Filter for Windows is already installed'
          return $isSuccess
@@ -542,6 +543,7 @@ Function Install-XDP
                }
             }
 
+
             $state = Get-Service -Name:'XDP'
          }
 
@@ -596,7 +598,7 @@ Function Install-WindowsCilium
 
       Write-Host 'Installing Windows Cilium'
 
-      If(-Not (Assert-TestSigningIsEnabled))
+      If(-Not (Assert-TestSigningIsEnabled -Silent))
       {
          If(-Not (Enable-TestSigning -Reboot)) { Throw }
       }
@@ -617,6 +619,7 @@ Function Install-WindowsCilium
    }
    Catch
    {
+      Write-Host "Exception: $_"
       $isSuccess = $false
    }
 
