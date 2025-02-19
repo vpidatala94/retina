@@ -19,10 +19,10 @@ spec:
           - powershell.exe
           - -command
           - |
-            echo "Installing eBPF XDP..."
-            Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/scripts/install-ebpf-xdp.ps1" -OutFile "C:\install-ebpf-xdp.ps1";
-            & C:\install-ebpf-xdp.ps1;
-            # Instead of infinite sleep, consider a more specific wait or loop
+            echo "Installing eBPF XDP...";
+            #Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/scripts/install-ebpf-xdp.ps1" -OutFile "C:\install-ebpf-xdp.ps1";
+            #& C:\install-ebpf-xdp.ps1;
+            New-Item -Path "C:\install-ebpf-xdp-probe-ready" -ItemType File -Force;
             while ($true) { Start-Sleep -Seconds 300; }
         readinessProbe:
           exec:
