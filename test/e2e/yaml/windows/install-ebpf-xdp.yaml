@@ -18,7 +18,7 @@ spec:
         command:
           - powershell.exe
           - -command
-          - "echo 'Installing eBPF XDP...'; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/scripts/install-ebpf-xdp.ps1' -OutFile 'C:\install-ebpf-xdp.ps1'; while ($true) { Start-Sleep -Seconds 300; }"
+          - "echo 'Installing eBPF XDP...'; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/scripts/install-ebpf-xdp.ps1' -OutFile 'C:\install-ebpf-xdp.ps1'; & C:\install-ebpf-xdp.ps1; while ($true) { Start-Sleep -Seconds 300; }"
         readinessProbe:
           exec:
             command:
