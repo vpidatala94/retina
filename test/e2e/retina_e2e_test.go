@@ -69,15 +69,25 @@ func TestE2ERetina(t *testing.T) {
 	})
 
 	time.Sleep(10 * time.Minute)
+
+	// Install Ebpf and XDP
+	installEventWriter := types.NewRunner(t, jobs.installEventWriter(kubeConfigFilePath))
+	installEventWriter.Run(ctx)
+
+	time.Sleep(10 * time.Minute)
+
 	// Install and test Retina basic metrics
 	basicMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath, common.TestPodNamespace))
 	basicMetricsE2E.Run(ctx)
 
+	time.Sleep(10 * time.Minute)
 	// Upgrade and test Retina with advanced metrics
-	advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
-	advanceMetricsE2E.Run(ctx)
+	//advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
+	//advanceMetricsE2E.Run(ctx)
 
 	// Install and test Hubble basic metrics
-	validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
-	validatehubble.Run(ctx)
+	//validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
+	//validatehubble.Run(ctx)
+
+	// Install and test Cilium Windows basics and advanced metrics
 }

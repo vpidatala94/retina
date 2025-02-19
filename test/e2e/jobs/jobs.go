@@ -119,6 +119,19 @@ func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
 	return job
 }
 
+func InstallEventWriter(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Install event writer")
+	job.AddStep(&kubernetes.CreateNamespace{
+		KubeConfigFilePath: kubeConfigFilePath,
+		Namespace:          "install-event-writer"}, nil)
+
+	job.AddStep(&kubernetes.ApplyYamlConfig{
+		YamlFilePath: "yaml/windows/install-event-writer.yaml",
+	}, nil)
+
+	return job
+}
+
 func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, testPodNamespace string) *types.Job {
 	job := types.NewJob("Install and test Retina with basic metrics")
 
