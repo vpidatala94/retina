@@ -86,8 +86,9 @@ func TestE2ERetina(t *testing.T) {
 	advanceMetricsE2E.Run(ctx)
 
 	// Install and test Hubble basic metrics
-	//validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
-	//validatehubble.Run(ctx)
+	validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
+	validatehubble.Run(ctx)
 
 	// Install and test Cilium Windows basics and advanced metrics
+	time.Sleep(10 * time.Minute)
 }
