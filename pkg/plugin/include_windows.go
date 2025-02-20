@@ -5,4 +5,5 @@ package plugin
 import (
 	_ "github.com/microsoft/retina/pkg/plugin/hnsstats"
 	_ "github.com/microsoft/retina/pkg/plugin/pktmon"
+	_ "github.com/vpidatala94/retina/pkg/plugin/ebpfwindows"
 )

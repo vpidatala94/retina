@@ -1,14 +1,16 @@
+#include <winsock2.h>
+#include <iphlpapi.h>
 #include <bpf/libbpf.h>
 #include <bpf/bpf.h>
-#include <windows.h>
+
 #include <vector>
 #include "event_writer.h"
-#include "event_writer_util.h"
+#include <vector>
 
 std::vector<std::pair<int, struct bpf_link*>> link_list;
 bpf_object* obj = NULL;
 
-extern "C" __declspec(dllexport) DWORD
+int
 set_filter(struct filter* flt) {
     uint8_t key = 0;
     int map_flt_fd = 0;
@@ -26,24 +28,66 @@ set_filter(struct filter* flt) {
     return 0;
 }
 
-extern "C" __declspec(dllexport)  DWORD
-check_five_tuple_exists(struct five_tuple* fvt) {
-    int map_evt_req_fd;
-    int value = 0;
+int pin_map(const char* pin_path, bpf_map* map) {
+    int map_fd = 0;
+    // Attempt to open the pinned map
+    map_fd = bpf_obj_get(pin_path);
+    if (map_fd < 0) {
+        // Get the file descriptor of the map
+        map_fd = bpf_map__fd(map);
 
-    map_evt_req_fd = bpf_obj_get(FIVE_TUPLE_MAP_PIN_PATH);
-    if (map_evt_req_fd < 0) {
-        return 1;
-    }
-    if (bpf_map_lookup_elem(map_evt_req_fd, fvt, &value) != 0) {
-        return 1;
-    }
+        if (map_fd < 0) {
+            fprintf(stderr, "%s - failed to get map file descriptor\n", __FUNCTION__);
+            return 1;
+        }
 
+        if (bpf_obj_pin(map_fd, pin_path) < 0) {
+            fprintf(stderr, "%s - failed to pin map to %s\n", pin_path, __FUNCTION__);
+            return 1;
+        }
+
+        printf("%s - map successfully pinned at %s\n", pin_path, __FUNCTION__);
+    } else {
+        printf("%s -pinned map found at %s\n", pin_path, __FUNCTION__);
+    }
     return 0;
 }
 
-extern "C" __declspec(dllexport)  DWORD
+std::vector<int> get_physical_interface_indices()
+{
+    std::vector<int> physical_indices;
+    ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
+    ULONG family = AF_UNSPEC;
+    ULONG outBufLen = 0;
+    PIP_ADAPTER_ADDRESSES pAddresses = NULL;
+    PIP_ADAPTER_ADDRESSES pCurrAddresses = NULL;
+
+    // Get the size needed for the buffer
+    if (GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen) == ERROR_BUFFER_OVERFLOW) {
+        pAddresses = (IP_ADAPTER_ADDRESSES*)malloc(outBufLen);
+    }
+
+    // Get the actual data
+    if (GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen) == NO_ERROR) {
+        pCurrAddresses = pAddresses;
+        while (pCurrAddresses) {
+            if (pCurrAddresses->IfType == IF_TYPE_ETHERNET_CSMACD && pCurrAddresses->OperStatus == IfOperStatusUp) {
+                physical_indices.push_back(pCurrAddresses->IfIndex);
+            }
+            pCurrAddresses = pCurrAddresses->Next;
+        }
+    }
+
+    if (pAddresses) {
+        free(pAddresses);
+    }
+
+    return physical_indices;
+}
+
+int
 attach_program_to_interface(int ifindx) {
+    printf("%s - Attaching program to interface with ifindex %d\n", __FUNCTION__, ifindx);
     struct bpf_program* prg = bpf_object__find_program_by_name(obj, "event_writer");
     bpf_link* link = NULL;
     if (prg == NULL) {
@@ -61,7 +105,7 @@ attach_program_to_interface(int ifindx) {
     return 0;
 }
 
-extern "C" __declspec(dllexport)  DWORD
+int
 pin_maps_load_programs(void) {
     struct bpf_program* prg = NULL;
     struct bpf_map *map_ev, *map_met, *map_fvt, *map_flt;
@@ -133,7 +177,7 @@ pin_maps_load_programs(void) {
 }
 
 // Function to unload programs and detach
-extern "C" __declspec(dllexport) DWORD
+int
 unload_programs_detach() {
     for (auto it = link_list.begin(); it != link_list.end(); it ++) {
         auto ifidx = it->first;
@@ -151,5 +195,27 @@ unload_programs_detach() {
         bpf_object__close(obj);
     }
 
+    return 0;
+}
+
+int main(int argc, char* argv[]) {
+    int ret;
+
+    printf ("Starting event writer\n");
+    ret = pin_maps_load_programs();
+    if (ret != 0) {
+        return ret;
+    }
+    std::vector<int> interface_indices = get_physical_interface_indices();
+    for (int ifindx : interface_indices) {
+        ret = attach_program_to_interface(ifindx);
+        if (ret != 0) {
+            return ret;
+        }
+    }
+
+    //Sleep for 10 minutes
+    Sleep(600000);
+    unload_programs_detach();
     return 0;
 }

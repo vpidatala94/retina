@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ebpf-xdp-install
+  namespace: ebpf-xdp-install  # Ensure this namespace exists
+spec:
+  selector:
+    matchLabels:
+      name: ebpf-xdp-install
+  template:
+    metadata:
+      labels:
+        name: ebpf-xdp-install
+    spec:
+      containers:
+      - name: ebpf-xdp-install-container
+        image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+        command:
+          - powershell.exe
+          - -command
+          - 'echo "Installing eBPF XDP..."; Invoke-WebRequest -Uri "https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/scripts/install-ebpf-xdp.ps1" -OutFile "C:\\install-ebpf-xdp.ps1"; & C:\\install-ebpf-xdp.ps1; while ($true) { Start-Sleep -Seconds 300; }'
+        readinessProbe:
+          exec:
+            command:
+              - powershell.exe
+              - -command
+              - Test-Path C:\install-ebpf-xdp-probe-ready
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: windows
+      securityContext:
+        windowsOptions:
+          hostProcess: true
+          runAsUserName: "NT AUTHORITY\\SYSTEM"

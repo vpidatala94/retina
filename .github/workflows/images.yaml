@@ -23,9 +23,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5.3.0
         with:
           go-version-file: go.mod
       - run: go version
@@ -35,7 +35,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -46,18 +45,13 @@ jobs:
         run: |
           set -euo pipefail
           echo "TAG=$(make version)" >> $GITHUB_ENV
-          if [ "$IS_MERGE_GROUP" == "true" ]; then
-            az acr login -n ${{ vars.ACR_NAME }}
-            make retina-image \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-              IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
-              BUILDX_ACTION=--push
-          else
-            make retina-image \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
-          fi
+          az acr login -n ${{ vars.ACR_NAME }}
+          make retina-image \
+            IMAGE_NAMESPACE=${{ github.repository }} \
+            PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
+            IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
+            APP_INSIGHTS_ID=${{ secrets.AZURE_APP_INSIGHTS_KEY }} \
+            BUILDX_ACTION=--push
         env:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
@@ -73,9 +67,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5.3.0
         with:
           go-version-file: go.mod
       - run: go version
@@ -85,7 +79,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -96,20 +89,14 @@ jobs:
         run: |
           set -euo pipefail
           echo "TAG=$(make version)" >> $GITHUB_ENV
-          if [ "$IS_MERGE_GROUP" == "true" ]; then
-            az acr login -n ${{ vars.ACR_NAME }}
-            make retina-image-win \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-              IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
-              WINDOWS_YEARS=${{ matrix.year }} \
-              BUILDX_ACTION=--push
-          else
-            make retina-image-win \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-              WINDOWS_YEARS=${{ matrix.year }}
-          fi
+          az acr login -n ${{ vars.ACR_NAME }}
+          make retina-image-win \
+            IMAGE_NAMESPACE=${{ github.repository }} \
+            PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
+            IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
+            APP_INSIGHTS_ID=${{ secrets.AZURE_APP_INSIGHTS_KEY }} \
+            WINDOWS_YEARS=${{ matrix.year }} \
+            BUILDX_ACTION=--push
         env:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
@@ -124,9 +111,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5.3.0
         with:
           go-version-file: go.mod
       - run: go version
@@ -136,7 +123,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -147,18 +133,13 @@ jobs:
         run: |
           set -euo pipefail
           echo "TAG=$(make version)" >> $GITHUB_ENV
-          if [ "$IS_MERGE_GROUP" == "true" ]; then
-            az acr login -n ${{ vars.ACR_NAME }}
-            make retina-operator-image \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-              IMAGE_REGISTRY=${{ vars.ACR_NAME }} \
-              BUILDX_ACTION=--push
-          else
-            make retina-operator-image \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
-          fi
+          az acr login -n ${{ vars.ACR_NAME }}
+          make retina-operator-image \
+            IMAGE_NAMESPACE=${{ github.repository }} \
+            PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
+            IMAGE_REGISTRY=${{ vars.ACR_NAME }} \
+            APP_INSIGHTS_ID=${{ secrets.AZURE_APP_INSIGHTS_KEY }} \
+            BUILDX_ACTION=--push
         env:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
@@ -173,9 +154,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5.3.0
         with:
           go-version-file: go.mod
       - run: go version
@@ -185,7 +166,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -196,18 +176,12 @@ jobs:
         run: |
           set -euo pipefail
           echo "TAG=$(make version)" >> $GITHUB_ENV
-          if [ "$IS_MERGE_GROUP" == "true" ]; then
-            az acr login -n ${{ vars.ACR_NAME }}
-            make retina-shell-image \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-              IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
-              BUILDX_ACTION=--push
-          else
-            make retina-shell-image \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
-          fi
+          az acr login -n ${{ vars.ACR_NAME }}
+          make retina-shell-image \
+            IMAGE_NAMESPACE=${{ github.repository }} \
+            PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
+            IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
+            BUILDX_ACTION=--push
         env:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
@@ -222,9 +196,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5.3.0
         with:
           go-version-file: go.mod
       - run: go version
@@ -234,7 +208,6 @@ jobs:
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -245,23 +218,17 @@ jobs:
         run: |
           set -euo pipefail
           echo "TAG=$(make version)" >> $GITHUB_ENV
-          if [ "$IS_MERGE_GROUP" == "true" ]; then
-            az acr login -n ${{ vars.ACR_NAME }}
-            make kubectl-retina-image \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
-              IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
-              BUILDX_ACTION=--push
-          else
-            make kubectl-retina-image \
-              IMAGE_NAMESPACE=${{ github.repository }} \
-              PLATFORM=${{ matrix.platform }}/${{ matrix.arch }}
-          fi
+          az acr login -n ${{ vars.ACR_NAME }}
+          make kubectl-retina-image \
+            IMAGE_NAMESPACE=${{ github.repository }} \
+            PLATFORM=${{ matrix.platform }}/${{ matrix.arch }} \
+            IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
+            BUILDX_ACTION=--push
         env:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
   manifests:
-    if: ${{ github.event_name == 'merge_group' && success('retina-images') && success('retina-win-images') && success('operator-images') && success('retina-shell-images')}}
+    if: ${{ success('retina-images') && success('retina-win-images') && success('operator-images') && success('retina-shell-images') && success('kubectl-retina-images') }}
     name: Generate Manifests
     runs-on: ubuntu-latest
     needs:
@@ -279,7 +246,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
@@ -297,26 +264,26 @@ jobs:
           set -euo pipefail
           az acr login -n ${{ vars.ACR_NAME }}
           make manifest COMPONENT=${{ matrix.components }} \
-          IMAGE_REGISTRY=${{ vars.ACR_NAME }}  \
+          IMAGE_REGISTRY=${{ vars.ACR_NAME }}
 
   e2e:
+    if: ${{ success('manifests') }}
     name: Run E2E Tests
     runs-on: ubuntu-latest
     needs: [manifests]
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v5.3.0
         with:
           go-version-file: go.mod
       - run: go version
 
       - name: Az CLI login
         uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -330,37 +297,3 @@ jobs:
         run: |
           set -euo pipefail
           go test -v ./test/e2e/. -timeout 60m -tags=e2e -count=1  -args -image-tag=$(make version) -image-registry=${{ vars.ACR_NAME }}  -image-namespace=${{ github.repository}}
-
-  perf:
-    if: ${{ github.event_name == 'merge_group' && success('manifests')}}
-    name: Retina Performance Test
-    runs-on: ubuntu-latest
-    needs: [manifests]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - run: go version
-
-      - name: Az CLI login
-        uses: azure/login@v2
-        if: ${{ github.event_name == 'merge_group' }}
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION }}
-
-      - name: Run Perf Tests
-        env:
-          AZURE_APP_INSIGHTS_KEY: ${{ secrets.AZURE_APP_INSIGHTS_KEY }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION }}
-          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          go test -v ./test/e2e/. -timeout 2h -tags=perf -count=1 -args -image-tag=$(make version) -image-registry=${{ vars.ACR_NAME }} -image-namespace=${{ github.repository }}

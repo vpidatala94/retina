@@ -26,7 +26,7 @@ import (
 
 const (
 	// name of the ebpfwindows plugin
-	name string = "windowseBPF"
+	name string = "ebpfwindows"
 	// name of the metrics
 	packetsReceived        string = "win_packets_recv_count"
 	packetsSent            string = "win_packets_sent_count"
