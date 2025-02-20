@@ -1,4 +1,4 @@
-module github.com/microsoft/retina
+module github.com/vpidatala94/retina
 
 go 1.23.4
 
