@@ -81,7 +81,7 @@ func TestE2ERetina(t *testing.T) {
 	basicMetricsE2E.Run(ctx)
 
 	time.Sleep(10 * time.Minute)
-	Upgrade and test Retina with advanced metrics
+	//Upgrade and test Retina with advanced metrics
 	advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
 	advanceMetricsE2E.Run(ctx)
 
