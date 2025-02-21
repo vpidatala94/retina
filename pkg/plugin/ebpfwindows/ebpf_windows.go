@@ -3,6 +3,8 @@ package ebpfwindows
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"time"
 
 	//"fmt"
@@ -139,6 +141,22 @@ func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint64) int {
 func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
 	eventsMap := NewEventsMap()
 	metricsMap := NewMetricsMap()
+	wd, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting current directory: %v\n", err)
+	} else {
+		fmt.Printf("Current Working Directory: %s\n", wd)
+	}
+
+	entries, err := os.ReadDir(wd)
+	if err != nil {
+		fmt.Printf("Error reading dir contents: %v\n", err)
+	} else {
+		fmt.Println("Directory contents:")
+		for _, entry := range entries {
+			fmt.Println(entry.Name())
+		}
+	}
 	err := eventsMap.RegisterForCallback(p.eventsMapCallback)
 	if err != nil {
 		p.l.Error("Error registering for events map callback", zap.Error(err))

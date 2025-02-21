@@ -11,7 +11,7 @@ operator:
   name: retina-operator
   enabled: false
   repository: demoebpfregistry.azurecr.io/vpidatala94/retina/retina-operator
-  tag: "a6d7eb3"
+  tag: "4c3d745"
   installCRDs: true
   enableRetinaEndpoint: false
   resources:
@@ -33,7 +33,7 @@ image:
   initRepository: demoebpfregistry.azurecr.io/vpidatala94/retina/retina-init
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "a6d7eb3"
+  tag: "4c3d745"
 
 enableConntrackMetrics: false
 enablePodLevel: false
