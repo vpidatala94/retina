@@ -77,7 +77,7 @@ ARG VERSION
 ENV GOARCH=${GOARCH}
 ENV GOOS=${GOOS}
 RUN --mount=type=cache,target="/root/.cache/go-build" go build -v -o /go/bin/retina/initretina -ldflags "-X github.com/microsoft/retina/internal/buildinfo.Version="$VERSION" -X github.com/microsoft/retina/internal/buildinfo.ApplicationInsightsID="$APP_INSIGHTS_ID"" init/retina/main_linux.go
-COPY /go/src/github.com/microsoft/retina/pkg/plugin/ebpfwindows/retinaebpfapi.dll /go/bin/retina/retinaebfapi.dll
+COPY --from=intermediate /go/src/github.com/microsoft/retina/pkg/plugin/ebpfwindows/retinaebpfapi.dll /go/bin/retina/retinaebpfapi.dll
 
 # tools image
 FROM mariner-core AS tools
