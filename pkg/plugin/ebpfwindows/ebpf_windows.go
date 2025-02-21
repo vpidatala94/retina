@@ -157,7 +157,7 @@ func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
 			fmt.Println(entry.Name())
 		}
 	}
-	err := eventsMap.RegisterForCallback(p.eventsMapCallback)
+	err = eventsMap.RegisterForCallback(p.eventsMapCallback)
 	if err != nil {
 		p.l.Error("Error registering for events map callback", zap.Error(err))
 		return
