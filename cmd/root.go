@@ -34,6 +34,17 @@ var (
 			} else {
 				fmt.Printf("Current Working Directory: %s\n", wd)
 			}
+
+			entries, err := os.ReadDir(wd)
+			if err != nil {
+				fmt.Printf("Error reading dir contents: %v\n", err)
+			} else {
+				fmt.Println("Directory contents:")
+				for _, entry := range entries {
+					fmt.Println(entry.Name())
+				}
+			}
+
 			d := legacy.NewDaemon(metricsAddr, probeAddr, cfgFile, enableLeaderElection)
 			if err := d.Start(); err != nil {
 				return fmt.Errorf("starting daemon: %w", err)
