@@ -110,6 +110,10 @@ func (m metricsMap) IterateWithCallback(cb IterateCallback) error {
 	// Convert the Go function into a syscall-compatible function
 	callback := syscall.NewCallback(enumMetricsSysCallCallback)
 
+	err := retinaEbpfApi.Load()
+	if err != nil {
+		fmt.Printf("DLL load error: %v\n", err)
+	}
 	// Call the API
 	ret, _, err := enumMetricsMap.Call(
 		uintptr(callback),
