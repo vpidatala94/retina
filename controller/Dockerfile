@@ -33,7 +33,7 @@ RUN if [ "$GOOS" = "linux" ] ; then \
 COPY ./pkg/plugin /go/src/github.com/microsoft/retina/pkg/plugin
 WORKDIR /go/src/github.com/microsoft/retina
 RUN dir /go/src/github.com/microsoft/retina/pkg/plugin/ebpfwindows
-COPY /go/src/github.com/microsoft/retina/pkg/plugin/ebpfwindows/retinaebpfapi.dll C:/hpc/retinaebpfapi.dll
+COPY /go/src/github.com/microsoft/retina/pkg/plugin/ebpfwindows/ C:/hpc/
 RUN if [ "$GOOS" = "linux" ] ; then \
       go mod init github.com/microsoft/retina; \
       go generate -skip "mockgen" -x /go/src/github.com/microsoft/retina/pkg/plugin/...; \
