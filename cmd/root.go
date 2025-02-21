@@ -28,6 +28,12 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Do Stuff Here
 			fmt.Println("Starting Retina Agent")
+			wd, err := os.Getwd()
+			if err != nil {
+				fmt.Printf("Error getting current directory: %v\n", err)
+			} else {
+				fmt.Printf("Current Working Directory: %s\n", wd)
+			}
 			d := legacy.NewDaemon(metricsAddr, probeAddr, cfgFile, enableLeaderElection)
 			if err := d.Start(); err != nil {
 				return fmt.Errorf("starting daemon: %w", err)
