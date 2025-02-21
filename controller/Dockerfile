@@ -140,6 +140,6 @@ COPY --from=controller-bin /go/bin/retina/controller controller.exe
 COPY --from=capture-bin /go/bin/retina/captureworkload captureworkload.exe
 ADD https://github.com/microsoft/etl2pcapng/releases/download/v1.10.0/etl2pcapng.exe /etl2pcapng.exe
 ADD https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/pkg/plugin/ebpfwindows/retinaebpfapi.dll /retinaebpfapi.dll
-RUN dir
+
 CMD ["controller.exe", "start", "--kubeconfig=.\\kubeconfig"]
 CMD ["controller.exe", "start", "--kubeconfig=.\\kubeconfig"]
