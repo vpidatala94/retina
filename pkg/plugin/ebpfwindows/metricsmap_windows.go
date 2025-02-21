@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/windows"
 )
 
 const (
@@ -63,7 +61,7 @@ type metricsMap struct {
 
 var (
 	// Load the retinaebpfapi.dll
-	retinaEbpfApi = windows.NewLazyDLL("C:\\hpc\\retinaebpfapi.dll")
+	retinaEbpfApi = syscall.NewLazyDLL("C:\\hpc\\retinaebpfapi.dll")
 	// Load the enumerate_cilium_metricsmap function
 	enumMetricsMap = retinaEbpfApi.NewProc("enumerate_cilium_metricsmap")
 )
