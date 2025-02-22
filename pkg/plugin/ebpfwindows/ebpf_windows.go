@@ -157,6 +157,8 @@ func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
 			fmt.Println(entry.Name())
 		}
 	}
+	path := os.Getenv("PATH")
+	fmt.Println("PATH environment variable:", path)
 	err = eventsMap.RegisterForCallback(p.eventsMapCallback)
 	if err != nil {
 		p.l.Error("Error registering for events map callback", zap.Error(err))
