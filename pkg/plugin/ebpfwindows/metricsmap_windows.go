@@ -61,7 +61,7 @@ type metricsMap struct {
 
 var (
 	// Load the retinaebpfapi.dll
-	retinaEbpfApi = syscall.NewLazyDLL("C:\\hpc\\retinaebpfapi.dll")
+	retinaEbpfApi = syscall.NewLazyDLL("retinaebpfapi.dll")
 	// Load the enumerate_cilium_metricsmap function
 	enumMetricsMap = retinaEbpfApi.NewProc("enumerate_cilium_metricsmap")
 )
