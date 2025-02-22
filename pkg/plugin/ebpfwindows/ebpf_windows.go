@@ -82,6 +82,7 @@ func (p *Plugin) Init() error {
 		return err
 	}
 	p.parser = parser
+	p.cfg.EnablePodLevel = true
 	return nil
 }
 
@@ -93,8 +94,6 @@ func (p *Plugin) Name() string {
 // Start the plugin by starting a periodic timer.
 func (p *Plugin) Start(ctx context.Context) error {
 	p.l.Info("Start ebpfWindows plugin...")
-	p.enricher = enricher.Instance()
-	p.enricher.Run()
 	p.pullCiliumMetricsAndEvents(ctx)
 	p.l.Info("Complete ebpfWindows plugin...")
 	return nil
