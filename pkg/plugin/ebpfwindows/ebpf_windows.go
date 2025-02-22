@@ -94,6 +94,8 @@ func (p *Plugin) Name() string {
 func (p *Plugin) Start(ctx context.Context) error {
 	p.l.Info("Start ebpfWindows plugin...")
 	p.enricher = enricher.Instance()
+	p.enricher.Run()
+	defer p.enricher.Reader.Close()
 	p.pullCiliumMetricsAndEvents(ctx)
 	p.l.Info("Complete ebpfWindows plugin...")
 	return nil
