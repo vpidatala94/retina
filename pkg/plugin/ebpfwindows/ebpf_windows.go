@@ -158,12 +158,10 @@ func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
 		}
 	}
 	oldPath := os.Getenv("PATH")
-	newPath := oldPath + "C:\\Program Files\\ebpf-for-windows\\"
+	newPath := oldPath + ";" + "C:\\Program Files\\ebpf-for-windows\\"
 	fmt.Println("PATH environment variable:", newPath)
 	if err := os.Setenv("PATH", newPath); err != nil {
 		fmt.Println("Error setting PATH environment variable: %v")
-	} else {
-		fmt.Println("Path enniroment variable set to:", newPath)
 	}
 	err = eventsMap.RegisterForCallback(p.eventsMapCallback)
 	if err != nil {
