@@ -95,7 +95,6 @@ func (p *Plugin) Start(ctx context.Context) error {
 	p.l.Info("Start ebpfWindows plugin...")
 	p.enricher = enricher.Instance()
 	p.enricher.Run()
-	defer p.enricher.Reader.Close()
 	p.pullCiliumMetricsAndEvents(ctx)
 	p.l.Info("Complete ebpfWindows plugin...")
 	return nil
@@ -196,6 +195,7 @@ func (p *Plugin) SetupChannel(ch chan *v1.Event) error {
 // Stop the plugin by cancelling the periodic timer.
 func (p *Plugin) Stop() error {
 	p.l.Info("Stop ebpfWindows plugin...")
+	p.enricher.Reader.Close()
 	return nil
 }
 
