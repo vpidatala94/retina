@@ -195,7 +195,6 @@ func (p *Plugin) SetupChannel(ch chan *v1.Event) error {
 // Stop the plugin by cancelling the periodic timer.
 func (p *Plugin) Stop() error {
 	p.l.Info("Stop ebpfWindows plugin...")
-	p.enricher.Reader.Close()
 	return nil
 }
 
