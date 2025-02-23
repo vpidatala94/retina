@@ -539,7 +539,6 @@ Function Install-WindowsCilium
       If(Assert-WindowsCiliumIsReady) {
          Throw "Cilium for Windows is not ready"
       }
-
    }
    Catch
    {
