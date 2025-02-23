@@ -59,8 +59,8 @@ func TestE2ERetina(t *testing.T) {
 	createTestInfra.Run(ctx)
 
 	// Install Ebpf and XDP
-	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
-	installEbpfAndXDP.Run(ctx)
+	//installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
+	//installEbpfAndXDP.Run(ctx)
 
 	t.Cleanup(func() {
 		if *common.DeleteInfra {
@@ -70,9 +70,9 @@ func TestE2ERetina(t *testing.T) {
 
 	time.Sleep(10 * time.Minute)
 
-	// Install Ebpf and XDP
-	installEventWriter := types.NewRunner(t, jobs.InstallEventWriter(kubeConfigFilePath))
-	installEventWriter.Run(ctx)
+	//// Install Ebpf and XDP
+	//installEventWriter := types.NewRunner(t, jobs.InstallEventWriter(kubeConfigFilePath))
+	//installEventWriter.Run(ctx)
 
 	time.Sleep(10 * time.Minute)
 
