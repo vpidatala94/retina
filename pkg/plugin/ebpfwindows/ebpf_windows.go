@@ -93,13 +93,13 @@ func (p *Plugin) Name() string {
 // Start the plugin by starting a periodic timer.
 func (p *Plugin) Start(ctx context.Context) error {
 	p.l.Info("Start ebpfWindows plugin...")
-	p.pullCiliumMetricsAndEvents(ctx)
-	p.l.Info("Complete ebpfWindows plugin...")
 	if enricher.IsInitialized() {
 		p.enricher = enricher.Instance()
 	} else {
 		p.l.Warn("retina enricher is not initialized")
 	}
+	p.pullCiliumMetricsAndEvents(ctx)
+	p.l.Info("Complete ebpfWindows plugin...")
 	return nil
 }
 
@@ -145,29 +145,13 @@ func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint64) int {
 func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
 	eventsMap := NewEventsMap()
 	metricsMap := NewMetricsMap()
-	wd, err := os.Getwd()
-	if err != nil {
-		fmt.Printf("Error getting current directory: %v\n", err)
-	} else {
-		fmt.Printf("Current Working Directory: %s\n", wd)
-	}
-
-	entries, err := os.ReadDir(wd)
-	if err != nil {
-		fmt.Printf("Error reading dir contents: %v\n", err)
-	} else {
-		fmt.Println("Directory contents:")
-		for _, entry := range entries {
-			fmt.Println(entry.Name())
-		}
-	}
 	oldPath := os.Getenv("PATH")
 	newPath := oldPath + ";" + "C:\\Program Files\\ebpf-for-windows\\"
 	fmt.Println("PATH environment variable:", newPath)
 	if err := os.Setenv("PATH", newPath); err != nil {
 		fmt.Println("Error setting PATH environment variable: %v")
 	}
-	err = eventsMap.RegisterForCallback(p.eventsMapCallback)
+	err := eventsMap.RegisterForCallback(p.eventsMapCallback)
 	if err != nil {
 		p.l.Error("Error registering for events map callback", zap.Error(err))
 		return
