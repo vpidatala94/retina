@@ -536,15 +536,10 @@ Function Install-WindowsCilium
       # Create the probe ready file
       New-Item -Path "C:\install-ebpf-xdp-probe-ready" -ItemType File -Force
 
-      Write-Host -Object:'Restarting'
-
-      Start-Sleep -Seconds:5
-
       If(Assert-WindowsCiliumIsReady) {
          Throw "Cilium for Windows is not ready"
       }
 
-      Restart-Computer
    }
    Catch
    {
