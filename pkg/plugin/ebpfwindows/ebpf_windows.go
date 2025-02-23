@@ -82,7 +82,6 @@ func (p *Plugin) Init() error {
 		return err
 	}
 	p.parser = parser
-	p.cfg.EnablePodLevel = true
 	return nil
 }
 
@@ -96,6 +95,11 @@ func (p *Plugin) Start(ctx context.Context) error {
 	p.l.Info("Start ebpfWindows plugin...")
 	p.pullCiliumMetricsAndEvents(ctx)
 	p.l.Info("Complete ebpfWindows plugin...")
+	if enricher.IsInitialized() {
+		p.enricher = enricher.Instance()
+	} else {
+		p.l.Warn("retina enricher is not initialized")
+	}
 	return nil
 }
 
