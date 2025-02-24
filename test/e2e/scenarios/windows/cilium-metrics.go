@@ -55,7 +55,6 @@ func (v *ValidateCiliumMetric) Run() error {
 	bpfeventwriterurl := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/bpf_event_writer.sys"
 	eventwriterexe := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/event_writer.exe"
 	cmd := fmt.Sprintf(`try {
-		echo "Installing event-writer...";
 		$response = Invoke-WebRequest -Uri "%s" -OutFile "C:\bpf_event_writer.sys" -ErrorAction Stop;
 		if ($response.StatusCode -ne 200) {
 			throw;
