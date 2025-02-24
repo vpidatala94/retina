@@ -109,7 +109,7 @@ int
 pin_maps_load_programs(void) {
     struct bpf_program* prg = NULL;
     struct bpf_map *map_ev, *map_met, *map_fvt, *map_flt;
-    struct filter flt;
+
     // Load the BPF object file
     obj = bpf_object__open("bpf_event_writer.sys");
     if (obj == NULL) {
@@ -167,12 +167,6 @@ pin_maps_load_programs(void) {
         return 1;
     }
 
-    memset(&flt, 0, sizeof(flt));
-    flt.event = 4; // TRACE
-    if (set_filter(&flt) != 0) {
-        return 1;
-    }
-
     return 0; // Return success
 }
 
@@ -198,19 +192,91 @@ unload_programs_detach() {
     return 0;
 }
 
-int main(int argc, char* argv[]) {
-    int ret;
+uint32_t ipStrToUint(const char* ipStr) {
+    uint32_t ip = 0;
+    int part = 0;
+    int parts = 0;
+    const char *p = ipStr;
+    char c;
 
-    printf ("Starting event writer\n");
-    ret = pin_maps_load_programs();
-    if (ret != 0) {
-        return ret;
+    while ((c = *p++) != '\0') {
+        if (c >= '0' && c <= '9') {
+            part = part * 10 + (c - '0');
+        } else if (c == '.') {
+            ip = (ip << 8) | (part & 0xFF);
+            part = 0;
+            parts++;
+        } else {
+            // Invalid character in IP string.
+            return 0;
+        }
     }
+
+    // Process the last octet.
+    ip = (ip << 8) | (part & 0xFF);
+    parts++;
+
+    // Ensure we have exactly four parts
+    if (parts != 4) {
+        return 0;
+    }
+
+    return ip;
+}
+
+int main(int argc, char* argv[]) {
+    struct filter flt;
+
+    if (argc != 11) {
+        printf("Usage: %s -event <event> -srcIP <srcIP> -dstIP <dstIP> -srcprt <srcprt> -dstprt <dstprt>\n", argv[0]);
+        return 1;
+    }
+
+    memset(&flt, 0, sizeof(flt));
+    // Parse the command-line arguments (flags)
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-event") == 0) {
+            if (i + 1 < argc)
+                flt.event = static_cast<uint8_t>(atoi(argv[++i]));
+        } else if (strcmp(argv[i], "-srcIP") == 0) {
+            if (i + 1 < argc)
+                flt.srcIP = ipStrToUint(argv[++i]);
+        } else if (strcmp(argv[i], "-dstIP") == 0) {
+            if (i + 1 < argc)
+                flt.dstIP = ipStrToUint(argv[++i]);
+        } else if (strcmp(argv[i], "-srcprt") == 0) {
+            if (i + 1 < argc)
+                flt.srcprt = static_cast<uint16_t>(atoi(argv[++i]));
+        } else if (strcmp(argv[i], "-dstprt") == 0) {
+            if (i + 1 < argc)
+                flt.dstprt = static_cast<uint16_t>(atoi(argv[++i]));
+        }
+    }
+
+    printf("Parsed Values:\n");
+    printf("Event: %d\n", flt.event);
+    printf("Source IP: %u.%u.%u.%u\n",
+           (flt.srcIP >> 24) & 0xFF, (flt.srcIP >> 16) & 0xFF,
+           (flt.srcIP >> 8) & 0xFF, flt.srcIP & 0xFF);
+    printf("Destination IP: %u.%u.%u.%u\n",
+           (flt.dstIP >> 24) & 0xFF, (flt.dstIP >> 16) & 0xFF,
+           (flt.dstIP >> 8) & 0xFF, flt.dstIP & 0xFF);
+    printf("Source Port: %u\n", flt.srcprt);
+    printf("Destination Port: %u\n", flt.dstprt);
+
+    printf("Starting event writer\n");
+    if (pin_maps_load_programs() != 0) {
+        return 1;
+    }
+
+    if (set_filter(&flt) != 0) {
+        return 1;
+    }
+
     std::vector<int> interface_indices = get_physical_interface_indices();
     for (int ifindx : interface_indices) {
-        ret = attach_program_to_interface(ifindx);
-        if (ret != 0) {
-            return ret;
+        if (attach_program_to_interface(ifindx) != 0) {
+            return 1;
         }
     }
 

@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: ebpf-xdp-install
-  namespace: ebpf-xdp-install  # Ensure this namespace exists
+  name: install-ebpf-xdp
+  namespace: install-ebpf-xdp  # Ensure this namespace exists
 spec:
   selector:
     matchLabels:
-      name: ebpf-xdp-install
+      name: install-ebpf-xdp
   template:
     metadata:
       labels:
-        name: ebpf-xdp-install
+        name: install-ebpf-xdp
     spec:
       containers:
-      - name: ebpf-xdp-install-container
+      - name: install-ebpf-xdp-container
         image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
         command:
           - powershell.exe

@@ -320,21 +320,21 @@ Function Enable-TestSigning
 
 <#
  .Name
-   Assert-WindowsCiliumIsReady
+   Assert-WindowsEbpfXdpIsReady
 
  .Synopsis
-   Check if Cilium for Windows is ready
+   Check if EBPF and XDP for Windows is ready
 
  .Description
-   Returns TRUE if Cilium for Windows is ready, otherwise FALSE.
+   Returns TRUE if EBPF and XDP for Windows is ready, otherwise FALSE.
 
  .Example
-   # Check if Cilium for Windows is ready
+   # Check if EBPF and XDP for Windows is ready
    Assert-WindowsCiliumFunctions
 #>
-Function Assert-WindowsCiliumIsReady
+Function Assert-WindowsEbpfXdpIsReady
 {
-    Write-Host -Object:'Validating Cilium for Windows is ready'
+    Write-Host -Object:'Validating EBPF and XDP for Windows is ready'
 
    [Boolean]  $isReady  = $true
    [String[]] $services = @(
@@ -489,6 +489,8 @@ Function Install-XDP
       If(-Not (Assert-SoftwareInstalled -SoftwareName:'XDP for Windows' -Silent)) {
          Throw
       }
+
+      Restart-Computer -Force
    }
    Catch
    {
@@ -502,14 +504,19 @@ Function Install-XDP
 
 <#
  .Name
-   Install-WindowsCilium
+   Install-EbpfXdp
+
+ .Synopsis
+   Installs EBPF and XDP for Windows
 
  .Description
-   Returns TRUE if the Cilium for Windows installation is successfully, otherwise FALSE.
-   Requires test signing to be enabled.  This is asserted up front and may trigger a restart.
-   A restart will occur if the NoRestart switch is not specified.  Any caller needs to account for this.
+   Returns TRUE if EBPF and XDP for Windows is installed successfully, otherwise FALSE.
+
+ .Example
+   # Install EBPF and XDP for Windows
+   Install-EbpfXdp
 #>
-Function Install-WindowsCilium
+Function Install-EbpfXdp
 {
    [cmdletbinding(DefaultParameterSetName='Default')]
 
@@ -517,28 +524,28 @@ Function Install-WindowsCilium
 
    Try
    {
-      If(Assert-WindowsCiliumIsReady) {
-          Write-Host 'Windows Cilium Installed already'
+      If(Assert-WindowsEbpfXdpIsReady) {
+          Write-Host 'Windows EBPF and XDP Installed already'
           return
       }
 
-      Write-Host 'Installing Windows Cilium'
+      Write-Host 'Installing Windows EBPF and XDP'
 
       If(-Not (Assert-TestSigningIsEnabled -Silent))
       {
-         If(-Not (Enable-TestSigning -Reboot)) { Throw }
+         If(-Not (Enable-TestSigning -Reboot)) { Throw "Enable-TestSigning failed" }
       }
 
-      If(-Not (Install-eBPF)) {Throw}
+      If(-Not (Install-eBPF)) {Throw "Install-eBPF failed"}
 
-      If(-Not (Install-XDP)) {Throw}
+      If(-Not (Install-XDP)) {Throw "Install-XDP failed"}
+
+      If(Assert-WindowsEbpfXdpIsReady) {
+         Throw "EBPF and XDP for Windows is not ready"
+      }
 
       # Create the probe ready file
       New-Item -Path "C:\install-ebpf-xdp-probe-ready" -ItemType File -Force
-
-      If(Assert-WindowsCiliumIsReady) {
-         Throw "Cilium for Windows is not ready"
-      }
    }
    Catch
    {
@@ -735,26 +742,26 @@ Function Uninstall-XDP
 
 <#
  .Name
-   Uninstall-WindowsCilium
+   Uninstall-EbpfXdp
 
  .Synopsis
-   Uninstalls Cilium for Windows
+   Uninstalls EBPF and XDP for Windows
 
  .Parameter LocalPath
-   Local directory to the Cilium for Windows binaries.
+   Local directory to the EBPF and XDP for Windows binaries.
    Default location is $env:LocalAppData\Temp
 
  .Parameter DisableTestSigning
    Optional switch used to disable test signing on the current Windows boot loader
 
  .Description
-   Returns TRUE if Cilium for Windows is uninstalled successfully, otherwise FALSE.
+   Returns TRUE if EBPF and XDP for Windows is uninstalled successfully, otherwise FALSE.
 
  .Example
-   # Uninstall Cilium for Windows
-   Uninstall-WindowsCilium
+   # Uninstall EBPF and XDP for Windows
+   Uninstall-EbpfXdp
 #>
-Function Uninstall-WindowsCilium
+Function Uninstall-EbpfXdp
 {
    [cmdletbinding(DefaultParameterSetName='Default')]
 
@@ -771,7 +778,7 @@ Function Uninstall-WindowsCilium
       [Switch] $NoReboot
    )
 
-   Write-Host 'Uninstalling Cilium for Windows'
+   Write-Host 'Uninstalling EBPF and XDP for Windows'
 
    [Boolean] $isSuccess = $true
 
@@ -796,4 +803,4 @@ Function Uninstall-WindowsCilium
 
 
 #Script Start
-Install-WindowsCilium
+Install-EbpfXdp

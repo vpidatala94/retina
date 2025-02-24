@@ -151,11 +151,19 @@ func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
 	if err := os.Setenv("PATH", newPath); err != nil {
 		fmt.Println("Error setting PATH environment variable: %v")
 	}
-	err := eventsMap.RegisterForCallback(p.eventsMapCallback)
-	if err != nil {
-		p.l.Error("Error registering for events map callback", zap.Error(err))
-		return
+	if p.enricher != nil {
+		err := eventsMap.RegisterForCallback(p.eventsMapCallback)
+		if err != nil {
+			p.l.Error("Error registering for events map callback", zap.Error(err))
+			return
+		}
+
+		defer func() {
+			p.l.Error("ebpfwindows plugin canceling", zap.Error(ctx.Err()))
+			eventsMap.UnregisterForCallback()
+		}()
 	}
+
 	ticker := time.NewTicker(p.cfg.MetricsInterval)
 	defer ticker.Stop()
 	for {
@@ -166,9 +174,7 @@ func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
 				p.l.Error("Error iterating metrics map", zap.Error(err))
 			}
 		case <-ctx.Done():
-			p.l.Error("ebpfwindows plugin canceling", zap.Error(ctx.Err()))
-			eventsMap.UnregisterForCallback()
-			return
+			break
 		}
 	}
 }

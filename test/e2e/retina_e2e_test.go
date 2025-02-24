@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/microsoft/retina/test/e2e/common"
 	"github.com/microsoft/retina/test/e2e/framework/helpers"
@@ -59,8 +58,8 @@ func TestE2ERetina(t *testing.T) {
 	createTestInfra.Run(ctx)
 
 	// Install Ebpf and XDP
-	//installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
-	//installEbpfAndXDP.Run(ctx)
+	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
+	installEbpfAndXDP.Run(ctx)
 
 	t.Cleanup(func() {
 		if *common.DeleteInfra {
@@ -68,19 +67,10 @@ func TestE2ERetina(t *testing.T) {
 		}
 	})
 
-	//time.Sleep(10 * time.Minute)
-
-	//// Install Ebpf and XDP
-	//installEventWriter := types.NewRunner(t, jobs.InstallEventWriter(kubeConfigFilePath))
-	//installEventWriter.Run(ctx)
-
-	//time.Sleep(10 * time.Minute)
-
 	// Install and test Retina basic metrics
 	basicMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath, common.TestPodNamespace))
 	basicMetricsE2E.Run(ctx)
 
-	//time.Sleep(10 * time.Minute)
 	//Upgrade and test Retina with advanced metrics
 	advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
 	advanceMetricsE2E.Run(ctx)
@@ -89,6 +79,7 @@ func TestE2ERetina(t *testing.T) {
 	validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
 	validatehubble.Run(ctx)
 
-	// Install and test Cilium Windows basics and advanced metrics
-	time.Sleep(10 * time.Minute)
+	// Validate EBPF Windows Metrics
+	validateEBPFWindowsMetrics := types.NewRunner(t, jobs.ValidateEBPFWindowsMetrics(kubeConfigFilePath))
+	validateEBPFWindowsMetrics.Run(ctx)
 }

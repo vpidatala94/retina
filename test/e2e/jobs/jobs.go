@@ -105,29 +105,25 @@ func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
 	return job
 }
 
-func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
+func InstallEbpfXdpAndTestMetrics(kubeConfigFilePath string) *types.Job {
 	job := types.NewJob("Install ebpf and xdp")
 	job.AddStep(&kubernetes.CreateNamespace{
 		KubeConfigFilePath: kubeConfigFilePath,
-		Namespace:          "ebpf-xdp-install"}, nil)
+		Namespace:          "install-ebpf-xdp"}, nil)
 
 	job.AddStep(&kubernetes.ApplyYamlConfig{
 		YamlFilePath: "yaml/windows/install-ebpf-xdp.yaml",
 	}, nil)
 
-	return job
-}
+	time.Sleep(10 * time.Minute)
 
-func InstallEventWriter(kubeConfigFilePath string) *types.Job {
-	job := types.NewJob("Install event writer")
-	job.AddStep(&kubernetes.CreateNamespace{
-		KubeConfigFilePath: kubeConfigFilePath,
-		Namespace:          "install-event-writer"}, nil)
-
-	job.AddStep(&kubernetes.ApplyYamlConfig{
-		YamlFilePath: "yaml/windows/install-event-writer.yaml",
+	job.AddStep(&kubernetes.EnsureStableComponent{
+		PodNamespace:           "install-ebpf-xdp",
+		LabelSelector:          "install-ebpf-xdp",
+		IgnoreContainerRestart: false,
 	}, nil)
 
+	job.AddScenario(windows.ValidateCiliumBasicMetric())
 	return job
 }
 
@@ -193,7 +189,6 @@ func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, test
 		}
 
 		job.AddScenario(windows.ValidateWindowsBasicMetric())
-		job.AddScenario(windows.ValidateCiliumBasicMetric())
 	}
 
 	job.AddStep(&kubernetes.EnsureStableComponent{
