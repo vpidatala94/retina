@@ -105,7 +105,13 @@ func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
 	return job
 }
 
-func InstallEbpfXdpAndTestMetrics(kubeConfigFilePath string) *types.Job {
+func ValidateCiliumMetrics(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Validate Cilium Metrics")
+	job.AddScenario(windows.ValidateCiliumBasicMetric())
+	return job
+}
+
+func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
 	job := types.NewJob("Install ebpf and xdp")
 	job.AddStep(&kubernetes.CreateNamespace{
 		KubeConfigFilePath: kubeConfigFilePath,
@@ -122,8 +128,6 @@ func InstallEbpfXdpAndTestMetrics(kubeConfigFilePath string) *types.Job {
 		LabelSelector:          "install-ebpf-xdp",
 		IgnoreContainerRestart: false,
 	}, nil)
-
-	job.AddScenario(windows.ValidateCiliumBasicMetric())
 	return job
 }
 
@@ -187,8 +191,6 @@ func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, test
 			name := scenario.name + " - Arch: " + arch
 			job.AddScenario(dns.ValidateBasicDNSMetrics(name, scenario.req, scenario.resp, testPodNamespace, arch))
 		}
-
-		job.AddScenario(windows.ValidateWindowsBasicMetric())
 	}
 
 	job.AddStep(&kubernetes.EnsureStableComponent{

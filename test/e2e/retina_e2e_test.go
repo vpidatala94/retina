@@ -79,7 +79,7 @@ func TestE2ERetina(t *testing.T) {
 	validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
 	validatehubble.Run(ctx)
 
-	// Validate EBPF Windows Metrics
-	validateEBPFWindowsMetrics := types.NewRunner(t, jobs.ValidateEBPFWindowsMetrics(kubeConfigFilePath))
-	validateEBPFWindowsMetrics.Run(ctx)
+	// Validate Cilium Windows Metrics
+	validateCiliumMetrics := types.NewRunner(t, jobs.ValidateCiliumMetrics(kubeConfigFilePath))
+	validateCiliumMetrics.Run(ctx)
 }
