@@ -64,7 +64,6 @@ func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string
 		ImageNamespaceEnv: generic.DefaultImageNamespace,
 		ImageRegistryEnv:  generic.DefaultImageRegistry,
 	}, nil)
-
 	return job
 }
 
