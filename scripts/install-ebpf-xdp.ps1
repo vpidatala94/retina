@@ -520,8 +520,6 @@ Function Install-XDP
 #>
 Function Install-EbpfXdp
 {
-   [cmdletbinding(DefaultParameterSetName='Default')]
-
    Try
    {
       If(Assert-WindowsEbpfXdpIsReady) {
@@ -736,6 +734,7 @@ Function Uninstall-XDP
 
    Return $isSuccess
 }
+
 
 #Script Start
 Install-EbpfXdp
