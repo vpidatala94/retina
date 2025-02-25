@@ -240,6 +240,7 @@ Function Disable-TestSigning
       Start-Sleep -Seconds:5
 
       Restart-Computer
+      Start-Sleep -Seconds:60
    }
 
    Return $isSuccess
@@ -310,6 +311,7 @@ Function Enable-TestSigning
       Start-Sleep -Seconds:5
 
       Restart-Computer
+      Start-Sleep -Seconds:60
    }
 
    Return $isSuccess
