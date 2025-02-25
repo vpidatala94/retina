@@ -405,11 +405,11 @@ Function Install-eBPF
       Write-Host 'Installing extended Berkley Packet Filter for Windows'
       # Download eBPF-for-Windows.
       $packageEbpfUrl = "https://github.com/microsoft/ebpf-for-windows/releases/download/Release-v0.20.0/Build-x64-native-only.NativeOnlyRelease.zip"
-      Invoke-WebRequest -Uri $packageEbpfUrl -OutFile "$LocalPath\\Build-x64-native-only-NativeOnlyRelease.zip"
-      Expand-Archive -Path "$LocalPath\\Build-x64-native-only-NativeOnlyRelease.zip" -DestinationPath "$LocalPath\\Build-x64-native-only-NativeOnlyRelease\\msi" -Force
-      copy "$($LocalPath)\\Build-x64-native-only-NativeOnlyRelease\\msi\\Build-x64-native-only NativeOnlyRelease\*.msi" $($LocalPath)
-      Start-Process -FilePath:"$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i $($LocalPath)\ebpf-for-windows.msi", '/qn', "INSTALLFOLDER=`"$($env:ProgramFiles)\ebpf-for-windows`"", 'ADDLOCAL=eBPF_Runtime_Components') -PassThru | Wait-Process
+      Invoke-WebRequest -Uri $packageEbpfUrl -OutFile "$LocalPath\Build-x64-native-only.NativeOnlyRelease.zip"
+      Expand-Archive -Path "$LocalPath\Build-x64-native-only.NativeOnlyRelease.zip" -DestinationPath "$LocalPath\Build-x64-native-only.NativeOnlyRelease\msi" -Force
+      Copy-Item "$LocalPath\Build-x64-native-only.NativeOnlyRelease\msi\Build-x64-native-only NativeOnlyRelease\*.msi" -Destination $LocalPath
 
+      Start-Process -FilePath "$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i", "$LocalPath\ebpf-for-windows.msi", "/qn", "INSTALLFOLDER=`"$($env:ProgramFiles)\ebpf-for-windows`"", "ADDLOCAL=eBPF_Runtime_Components") -PassThru | Wait-Process
       If(-Not (Assert-SoftwareInstalled -ServiceName:'eBPFCore' -Silent) -Or
          -Not (Assert-SoftwareInstalled -ServiceName:'NetEbpfExt' -Silent))
       {
@@ -471,10 +471,10 @@ Function Install-XDP
       # Download XDP-for-Windows.
       Write-Host 'Installing eXpress Data Path for Windows'
       $packageXdpUrl = "https://github.com/microsoft/xdp-for-windows/releases/download/v1.1.0%2Bbed474a/bin_Release_x64.zip"
-      Invoke-WebRequest -Uri $packageXdpUrl -OutFile "$LocalPath\\bin_Release_x64.zip"
-      Expand-Archive -Path "$LocalPath\\bin_Release_x64.zip" -DestinationPath "$LocalPath\\bin_Release_x64" -Force
-      copy "$LocalPath\\bin_Release_x64\\amd64fre\\xdp.cer" $LocalPath
-      copy "$LocalPath\\bin_Release_x64\\amd64fre\\xdpcfg.exe" $LocalPath
+      Invoke-WebRequest -Uri $packageXdpUrl -OutFile "$LocalPath\bin_Release_x64.zip"
+      Expand-Archive -Path "$LocalPath\bin_Release_x64.zip" -DestinationPath "$LocalPath\bin_Release_x64" -Force
+      copy "$LocalPath\bin_Release_x64\amd64fre\xdp.cer" $LocalPath
+      copy "$LocalPath\bin_Release_x64\amd64fre\xdpcfg.exe" $LocalPath
       CertUtil.exe -addstore Root "$LocalPath\xdp.cer"
       CertUtil.exe -addstore TrustedPublisher "$LocalPath\xdp.cer"
       Invoke-WebRequest -Uri "https://github.com/microsoft/xdp-for-windows/releases/download/v1.1.0%2Bbed474a/xdp-for-windows.1.1.0.msi" -OutFile "$LocalPath\xdp-for-windows.1.1.0.msi"

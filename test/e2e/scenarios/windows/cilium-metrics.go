@@ -64,7 +64,7 @@ func (v *ValidateCiliumMetric) Run() error {
 		if ($response.StatusCode -ne 200) {
 			throw;
 		}
-		& C:\event_writer.exe -event 4 -srcIP %s;
+		& C:\event_writer.exe -event 4 -srcIP %d;
 		Write-Output 0;
 	} catch {
 		Write-Output 1;
