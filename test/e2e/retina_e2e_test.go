@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/microsoft/retina/test/e2e/common"
 	"github.com/microsoft/retina/test/e2e/framework/helpers"
@@ -60,6 +61,8 @@ func TestE2ERetina(t *testing.T) {
 	// Install Ebpf and XDP
 	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
 	installEbpfAndXDP.Run(ctx)
+
+	time.Sleep(10 * time.Minute)
 
 	t.Cleanup(func() {
 		if *common.DeleteInfra {
