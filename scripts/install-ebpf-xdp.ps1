@@ -491,6 +491,8 @@ Function Install-XDP
       }
 
       Restart-Computer -Force
+      #to prevent any further commands in between
+      Start-Sleep -Seconds:60
    }
    Catch
    {
@@ -523,9 +525,6 @@ Function Install-EbpfXdp
       If(Assert-WindowsEbpfXdpIsReady) {
           return
       }
-
-      Write-Host "Flushing $env:TEMP"
-      Remove-Item -Path "$env:TEMP*" -Recurse -Force
 
       If(-Not (Assert-TestSigningIsEnabled -Silent))
       {
