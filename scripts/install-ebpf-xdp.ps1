@@ -298,6 +298,7 @@ Function Enable-TestSigning
    }
    Catch
    {
+      Write-Host "Enable-TestSigning : $_"
       $isSuccess = $false
    }
 
@@ -407,6 +408,7 @@ Function Install-eBPF
       $packageEbpfUrl = "https://github.com/microsoft/ebpf-for-windows/releases/download/Release-v0.20.0/Build-x64-native-only.NativeOnlyRelease.zip"
       Invoke-WebRequest -Uri $packageEbpfUrl -OutFile "$LocalPath\\Build-x64-native-only-NativeOnlyRelease.zip"
       Expand-Archive -Path "$LocalPath\\Build-x64-native-only-NativeOnlyRelease.zip" -DestinationPath "$LocalPath\\Build-x64-native-only-NativeOnlyRelease\\msi" -Force
+      copy "$($LocalPath)\\Build-x64-native-only-NativeOnlyRelease\\msi\\Build-x64-native-only NativeOnlyRelease\*.msi" $($LocalPath)
       Start-Process -FilePath:"$($env:WinDir)\System32\MSIExec.exe" -ArgumentList @("/i $($LocalPath)\ebpf-for-windows.msi", '/qn', "INSTALLFOLDER=`"$($env:ProgramFiles)\ebpf-for-windows`"", 'ADDLOCAL=eBPF_Runtime_Components') -PassThru | Wait-Process
 
       If(-Not (Assert-SoftwareInstalled -ServiceName:'eBPFCore' -Silent) -Or
@@ -520,40 +522,35 @@ Function Install-EbpfXdp
 {
    [cmdletbinding(DefaultParameterSetName='Default')]
 
-   [Boolean] $isSuccess = $true
-
    Try
    {
       If(Assert-WindowsEbpfXdpIsReady) {
-          Write-Host 'Windows EBPF and XDP Installed already'
           return
       }
 
-      Write-Host 'Installing Windows EBPF and XDP'
+      Write-Host "Flushing $env:TEMP"
+      Remove-Item -Path "$env:TEMP*" -Recurse -Force
 
       If(-Not (Assert-TestSigningIsEnabled -Silent))
       {
-         If(-Not (Enable-TestSigning -Reboot)) { Throw "Enable-TestSigning failed" }
+         If(-Not (Enable-TestSigning -Reboot)) {Throw}
       }
 
-      If(-Not (Install-eBPF)) {Throw "Install-eBPF failed"}
+      If(-Not (Install-eBPF)) {Throw}
 
-      If(-Not (Install-XDP)) {Throw "Install-XDP failed"}
+      If(-Not (Install-XDP)) {Throw}
 
-      If(Assert-WindowsEbpfXdpIsReady) {
-         Throw "EBPF and XDP for Windows is not ready"
-      }
+      If(Assert-WindowsEbpfXdpIsReady) {Throw}
 
       # Create the probe ready file
       New-Item -Path "C:\install-ebpf-xdp-probe-ready" -ItemType File -Force
    }
    Catch
    {
-      Write-Host "Exception: $_"
       $isSuccess = $false
    }
 
-   Return $isSuccess
+   Write-Output $isSuccess
 }
 
 <#
