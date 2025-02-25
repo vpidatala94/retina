@@ -403,7 +403,6 @@ Function Install-eBPF
       }
 
       Write-Host 'Installing extended Berkley Packet Filter for Windows'
-      $ProgressPreference = 'SilentlyContinue'
       # Download eBPF-for-Windows.
       $packageEbpfUrl = "https://github.com/microsoft/ebpf-for-windows/releases/download/Release-v0.20.0/Build-x64-native-only.NativeOnlyRelease.zip"
       Invoke-WebRequest -Uri $packageEbpfUrl -OutFile "$LocalPath\\Build-x64-native-only-NativeOnlyRelease.zip"
@@ -415,7 +414,6 @@ Function Install-eBPF
          -Not (Assert-SoftwareInstalled -ServiceName:'NetEbpfExt' -Silent))
       {
          Write-Error -Message:"`teBPF service failed to install"
-
          Throw
       }
 
