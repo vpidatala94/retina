@@ -323,7 +323,7 @@ func TestMain(t *testing.T) {
 func ValidateFlowObject(l *log.ZapLogger, ctx context.Context, e *enricher.Enricher, evt_type uint8) (int, error) {
 	eventChannel := make(chan int)
 	set_filter := Event_WriterDLL.NewProc("set_filter")
-	// Hardcoding IP addr for aka.ms - 23.213.38.151
+	// Hardcoding IP addr for aka.ms - 23.213.38.151 - 399845015
 	flt := &Filter{
 		Event:   evt_type,
 		SrcIP:   399845015,

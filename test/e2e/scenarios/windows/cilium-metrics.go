@@ -33,8 +33,9 @@ func (v *ValidateCiliumMetric) Run() error {
 	}
 
 	// Install Event-Writer
+	ebpfXDPLabelSelector := fmt.Sprintf("name=%s", v.EbpfXdpDeamonSetName)
 	pods, err := clientset.CoreV1().Pods(v.EbpfXdpDeamonSetNamespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: v.EbpfXdpDeamonSetNamespace,
+		LabelSelector: ebpfXDPLabelSelector,
 	})
 	if err != nil {
 		panic(err.Error())
@@ -51,7 +52,9 @@ func (v *ValidateCiliumMetric) Run() error {
 	}
 
 	bpfeventwriterurl := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/bpf_event_writer.sys"
-	eventwriterexe := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/event_writer.exe"
+	eventwriterexeurl := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/event_writer.exe"
+	// Hardcoding IP addr for aka.ms - 23.213.38.151 - 399845015
+	aksmsIpaddr := 399845015
 	cmd := fmt.Sprintf(`try {
 		$response = Invoke-WebRequest -Uri "%s" -OutFile "C:\bpf_event_writer.sys" -ErrorAction Stop;
 		if ($response.StatusCode -ne 200) {
@@ -61,11 +64,11 @@ func (v *ValidateCiliumMetric) Run() error {
 		if ($response.StatusCode -ne 200) {
 			throw;
 		}
-		& C:\event_writer.exe;
+		& C:\event_writer.exe -event 4 -srcIP %s;
 		Write-Output 0;
 	} catch {
 		Write-Output 1;
-	}`, bpfeventwriterurl, eventwriterexe)
+	}`, bpfeventwriterurl, eventwriterexeurl, aksmsIpaddr)
 
 	err = defaultRetrier.Do(context.TODO(), func() error {
 		outputBytes, err := k8s.ExecPod(context.TODO(), clientset, config, windowsEbpfXdpPod.Namespace, windowsEbpfXdpPod.Name, cmd)

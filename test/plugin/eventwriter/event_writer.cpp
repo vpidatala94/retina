@@ -227,11 +227,6 @@ uint32_t ipStrToUint(const char* ipStr) {
 int main(int argc, char* argv[]) {
     struct filter flt;
 
-    if (argc != 11) {
-        printf("Usage: %s -event <event> -srcIP <srcIP> -dstIP <dstIP> -srcprt <srcprt> -dstprt <dstprt>\n", argv[0]);
-        return 1;
-    }
-
     memset(&flt, 0, sizeof(flt));
     // Parse the command-line arguments (flags)
     for (int i = 1; i < argc; i++) {

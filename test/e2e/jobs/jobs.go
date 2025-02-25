@@ -125,7 +125,7 @@ func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
 
 	job.AddStep(&kubernetes.EnsureStableComponent{
 		PodNamespace:           "install-ebpf-xdp",
-		LabelSelector:          "install-ebpf-xdp",
+		LabelSelector:          "name=install-ebpf-xdp",
 		IgnoreContainerRestart: false,
 	}, nil)
 	return job
