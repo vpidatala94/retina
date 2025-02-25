@@ -10,9 +10,11 @@ func ValidateCiliumBasicMetric() *types.Scenario {
 	steps := []*types.StepWrapper{
 		{
 			Step: &ValidateCiliumMetric{
-				KubeConfigFilePath:       "./test.pem",
-				RetinaDaemonSetNamespace: common.KubeSystemNamespace,
-				RetinaDaemonSetName:      "retina-agent-win",
+				KubeConfigFilePath:        "./test.pem",
+				RetinaDaemonSetNamespace:  common.KubeSystemNamespace,
+				RetinaDaemonSetName:       "retina-agent-win",
+				EbpfXdpDeamonSetNamespace: "install-ebpf-xdp",
+				EbpfXdpDeamonSetName:      "install-ebpf-xdp",
 			},
 		},
 	}
