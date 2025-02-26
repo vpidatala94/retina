@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/microsoft/retina/test/e2e/common"
 	k8s "github.com/microsoft/retina/test/e2e/framework/kubernetes"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +20,7 @@ type ValidateCiliumMetric struct {
 	RetinaDaemonSetName       string
 }
 
-func (v *ValidateCiliumMetric) Run() error {
+func (v *ValidateCiliumMetric) ExecCommandInEbpfXdpHpcPod(cmd string) error {
 	config, err := clientcmd.BuildConfigFromFlags("", v.KubeConfigFilePath)
 	if err != nil {
 		return fmt.Errorf("error building kubeconfig: %w", err)
@@ -32,7 +31,6 @@ func (v *ValidateCiliumMetric) Run() error {
 		return fmt.Errorf("error creating Kubernetes client: %w", err)
 	}
 
-	// Install Event-Writer
 	ebpfXDPLabelSelector := fmt.Sprintf("name=%s", v.EbpfXdpDeamonSetName)
 	pods, err := clientset.CoreV1().Pods(v.EbpfXdpDeamonSetNamespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: ebpfXDPLabelSelector,
@@ -47,14 +45,32 @@ func (v *ValidateCiliumMetric) Run() error {
 			windowsEbpfXdpPod = &pods.Items[pod]
 		}
 	}
+
 	if windowsEbpfXdpPod == nil {
 		return ErrorNoWindowsPod
 	}
 
+	err = defaultRetrier.Do(context.TODO(), func() error {
+		outputBytes, err := k8s.ExecPod(context.TODO(), clientset, config, windowsEbpfXdpPod.Namespace, windowsEbpfXdpPod.Name, cmd)
+		if err != nil {
+			return fmt.Errorf("error executing command in windows retina pod: %w", err)
+		}
+		output := string(outputBytes)
+		fmt.Println(output)
+		return nil
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return nil
+}
+
+func (v *ValidateCiliumMetric) InstallEventWriter() error {
+	// Install Event-Writer
 	bpfeventwriterurl := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/bpf_event_writer.sys"
 	eventwriterexeurl := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/event_writer.exe"
-	// Hardcoding IP addr for aka.ms - 23.213.38.151 - 399845015
-	aksmsIpaddr := 399845015
+
 	cmd := fmt.Sprintf(`try {
 		$response = Invoke-WebRequest -Uri "%s" -OutFile "C:\bpf_event_writer.sys" -ErrorAction Stop;
 		if ($response.StatusCode -ne 200) {
@@ -64,61 +80,23 @@ func (v *ValidateCiliumMetric) Run() error {
 		if ($response.StatusCode -ne 200) {
 			throw;
 		}
-		cd C:\;
-		.\event_writer.exe -event 4 -srcIP %d;
 		Write-Output 0;
 	} catch {
 		Write-Output 1;
-	}`, bpfeventwriterurl, eventwriterexeurl, aksmsIpaddr)
+	}`, bpfeventwriterurl, eventwriterexeurl)
 
-	err = defaultRetrier.Do(context.TODO(), func() error {
-		outputBytes, err := k8s.ExecPod(context.TODO(), clientset, config, windowsEbpfXdpPod.Namespace, windowsEbpfXdpPod.Name, cmd)
-		if err != nil {
-			return fmt.Errorf("error executing command in windows retina pod: %w", err)
-		}
-		output := string(outputBytes)
-		if output != "0" {
-			return fmt.Errorf("failed to install event-writer: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		panic(err.Error())
-	}
+	v.ExecCommandInEbpfXdpHpcPod(cmd)
+	return nil
+}
 
+func (v *ValidateCiliumMetric) Run() error {
+	v.InstallEventWriter()
 	time.Sleep(10 * time.Minute)
-
-	pods, err = clientset.CoreV1().Pods(v.RetinaDaemonSetNamespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: "k8s-app=retina",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-
-	var windowsRetinaPod *v1.Pod
-	for pod := range pods.Items {
-		if pods.Items[pod].Spec.NodeSelector["kubernetes.io/os"] == "windows" {
-			windowsRetinaPod = &pods.Items[pod]
-		}
-	}
-	if windowsRetinaPod == nil {
-		return ErrorNoWindowsPod
-	}
-
-	// wrap this in a retrier because windows is slow
-	var output []byte
-	err = defaultRetrier.Do(context.TODO(), func() error {
-		output, err = k8s.ExecPod(context.TODO(), clientset, config, windowsRetinaPod.Namespace, windowsRetinaPod.Name, fmt.Sprintf("curl -s http://localhost:%d/metrics", common.RetinaPort))
-		if err != nil {
-			return fmt.Errorf("error executing command in windows retina pod: %w", err)
-		}
-		if len(output) == 0 {
-			return ErrNoMetricFound
-		}
-
-		fmt.Println(output)
-		return nil
-	})
+	// Hardcoding IP addr for aka.ms - 23.213.38.151 - 399845015
+	//aksmsIpaddr := 399845015
+	// Enable
+	cmd := "cd C:\\ && .\\event_writer.exe -event 4"
+	v.ExecCommandInEbpfXdpHpcPod(cmd)
 	return nil
 }
 

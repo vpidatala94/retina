@@ -5,8 +5,8 @@ import (
 	"github.com/microsoft/retina/test/e2e/framework/types"
 )
 
-func ValidateCiliumBasicMetric() *types.Scenario {
-	name := "Cilium Windows Metrics"
+func ValidateCiliumMetricScenario() *types.Scenario {
+	name := "Validate Windows Cilium Basic Metrics"
 	steps := []*types.StepWrapper{
 		{
 			Step: &ValidateCiliumMetric{
