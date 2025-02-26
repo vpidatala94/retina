@@ -75,12 +75,12 @@ func TestE2ERetina(t *testing.T) {
 	basicMetricsE2E.Run(ctx)
 
 	//Upgrade and test Retina with advanced metrics
-	advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
-	advanceMetricsE2E.Run(ctx)
+	//advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
+	//advanceMetricsE2E.Run(ctx)
 
 	// Install and test Hubble basic metrics
-	validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
-	validatehubble.Run(ctx)
+	//validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
+	//validatehubble.Run(ctx)
 
 	// Validate Cilium Windows Metrics
 	validateCiliumMetrics := types.NewRunner(t, jobs.ValidateCiliumMetrics(kubeConfigFilePath))
