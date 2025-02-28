@@ -74,7 +74,7 @@ func (v *ValidateCiliumMetric) InstallEventWriter() error {
 	cmd := fmt.Sprintf(`
 		Invoke-WebRequest -Uri "%s" -OutFile "C:\bpf_event_writer.sys" -ErrorAction Stop`, bpfeventwriterurl)
 	v.ExecCommandInEbpfXdpHpcPod(cmd)
-	cmd := fmt.Sprintf(`
+	cmd = fmt.Sprintf(`
 		Invoke-WebRequest -Uri "%s" -OutFile "C:\event_writer.exe" -ErrorAction Stop`, eventwriterexeurl)
 	v.ExecCommandInEbpfXdpHpcPod(cmd)
 	return nil
