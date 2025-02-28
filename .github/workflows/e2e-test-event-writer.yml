@@ -44,7 +44,7 @@ jobs:
         shell: cmd
         run: |
           dir
-          nuget restore
+          nuget restore event_writer.sln
         working-directory: ${{ env.EVENT_WRITER_PATH }}
 
       - name: Build Event-Writer
