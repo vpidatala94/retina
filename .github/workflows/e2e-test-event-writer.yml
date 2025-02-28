@@ -1,4 +1,5 @@
 name: Build E2E Test Event Writer
+workflow_dispatch: none
 
 permissions:
   contents: read
