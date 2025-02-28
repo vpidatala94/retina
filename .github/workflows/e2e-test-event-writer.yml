@@ -1,5 +1,11 @@
 name: Build E2E Test Event Writer
-workflow_dispatch: none
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
 
 permissions:
   contents: read
