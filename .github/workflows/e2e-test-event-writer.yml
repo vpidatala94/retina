@@ -32,8 +32,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION }}
 
-      - name: Build Images
+      - name: Setup Dev Env
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/microsoft/ebpf-for-windows/main/scripts/Setup-DevEnv.ps1" -OutFile "Setup-DevEnv.ps1" -UseBasicParsing
           pwsh -File ./Setup-DevEnv.ps1
+
+      - name: Build Event Writer
+        shell: cmd
+        working-directory: test/e2e/tools/eventwriter
+        run: |
+          msbuild /p:Configuration=Release /p:Platform=x64 event_writer.sln
