@@ -117,6 +117,10 @@ int extract_five_tuple_info(void* data, int bytes_to_copy, struct five_tuple* tu
     struct ethhdr *eth;
     uint8_t present = 1;
 
+    if (data == NULL || tup == NULL) {
+        return 1;
+    }
+
     if (bytes_to_copy < sizeof(struct ethhdr)) {
         return 1;
     }
@@ -197,60 +201,6 @@ event_writer(xdp_md_t* ctx) {
     uint32_t size_to_copy = 128;
     uint8_t flt_evttype, present = 1;
 
-    if ((uintptr_t)ctx->data + size_to_copy > (uintptr_t)ctx->data_end) {
-		size_to_copy = (uintptr_t)ctx->data_end - (uintptr_t)ctx->data;
-	}
-
-    memset(&tup, 0, sizeof(tup));
-    if (extract_five_tuple_info(ctx->data, size_to_copy, &tup) != 0) {
-        return XDP_PASS;
-    }
-
-    flt = (struct filter*) bpf_map_lookup_elem(&filter_map, &flt_key);
-	if (flt == NULL) {
-		return XDP_PASS;
-	}
-
-    if (check_filter(flt, &tup) != 0) {
-        return XDP_PASS;
-    }
-
-    if (bpf_map_update_elem(&five_tuple_map, &tup, &present, BPF_ANY) != 0) {
-        return XDP_PASS;
-    }
-
-    flt_evttype = flt->event;
-	if (flt_evttype == CILIUM_NOTIFY_TRACE) {
-        struct trace_notify* trc_elm;
-
-        //Create a Mock Trace Event
-        trc_elm = (struct trace_notify *) bpf_map_lookup_elem(&trc_buffer, &buf_key);
-        if (trc_elm == NULL) {
-            return XDP_PASS;
-        }
-        create_trace_ntfy_event(trc_elm);
-        memset(trc_elm->data, 0, sizeof(trc_elm->data));
-        memcpy(trc_elm->data, ctx->data, size_to_copy);
-        bpf_ringbuf_output(&cilium_events, trc_elm, sizeof(struct trace_notify), 0);
-        update_metrics(10, METRIC_INGRESS, 0, 0, 0);
-    //update_metrics(10, METRIC_EGRESS, 0, 0, 0);
-
-    }
-    if (flt_evttype == CILIUM_NOTIFY_DROP) {
-        struct drop_notify* drp_elm;
-
-        //Create a Mock Drop Event
-        drp_elm = (struct drop_notify *) bpf_map_lookup_elem(&drp_buffer, &buf_key);
-        if (drp_elm == NULL) {
-            return XDP_PASS;
-        }
-        create_drop_event(drp_elm);
-        memset(drp_elm->data, 0, sizeof(drp_elm->data));
-        memcpy(drp_elm->data, ctx->data, size_to_copy);
-        bpf_ringbuf_output(&cilium_events, drp_elm, sizeof(struct drop_notify), 0);
-        update_metrics(10, METRIC_INGRESS, 0, 0, 0);
-        //update_metrics(10, METRIC_EGRESS, 0, 0, 0);
-    }
 
     return XDP_PASS;
 }
