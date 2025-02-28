@@ -34,7 +34,6 @@ jobs:
 
       - name: Build Images
         shell: cmd
-        working-directory: test/plugin/event-writer
         run: |
           set -euo pipefail
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/microsoft/ebpf-for-windows/main/scripts/Setup-DevEnv.ps1" -OutFile "Setup-DevEnv.ps1" -UseBasicParsing
