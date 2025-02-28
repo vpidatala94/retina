@@ -43,12 +43,11 @@ jobs:
       - name: Nuget Restore
         shell: cmd
         run: |
-          dir
-          nuget restore event_writer.sln
+          nuget restore .\event_writer.sln
         working-directory: ${{ env.EVENT_WRITER_PATH }}
 
       - name: Build Event-Writer
         shell: pwsh
         run: |
-          & msbuild.exe /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
+          msbuild.exe /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
         working-directory: ${{ env.EVENT_WRITER_PATH }}
