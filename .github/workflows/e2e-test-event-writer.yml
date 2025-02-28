@@ -12,7 +12,6 @@ permissions:
   id-token: write
 
 env:
-  MSBUILD_PATH: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\amd64'
   EVENT_WRITER_PATH: "${{ github.workspace }}/test/e2e/tools/event-writer/"
 
 jobs:
@@ -44,11 +43,12 @@ jobs:
       - name: Nuget Restore
         shell: cmd
         run: |
+          dir
           nuget restore
         working-directory: ${{ env.EVENT_WRITER_PATH }}
 
       - name: Build Event-Writer
         shell: pwsh
         run: |
-          & "$MSBUILD_PATH\msbuild.exe" /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
+          & msbuild.exe /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
         working-directory: ${{ env.EVENT_WRITER_PATH }}
