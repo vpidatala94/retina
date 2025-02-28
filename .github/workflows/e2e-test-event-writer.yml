@@ -11,6 +11,10 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  MSBUILD_PATH: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\amd64'
+  EVENT_WRITER_PATH: "${{ github.workspace }}/test/e2e/tools/event-writer/"
+
 jobs:
   retina-win-e2e-bpf-images:
     name: Build E2E Test Event Writer
@@ -41,10 +45,10 @@ jobs:
         shell: cmd
         run: |
           nuget restore
+        working-directory: ${{ env.EVENT_WRITER_PATH }}
 
       - name: Build Event-Writer
         shell: pwsh
         run: |
-          $MSBUILD_PATH = 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\amd64'
-          $SOLUTION_FILE_PATH = "${{ github.workspace }}/test/e2e/tools/event-writer/event_writer.sln"
-          & "$MSBUILD_PATH\msbuild.exe" /m /p:Configuration=Release /p:Platform=x64 /restore "$SOLUTION_FILE_PATH"
+          & "$MSBUILD_PATH\msbuild.exe" /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
+        working-directory: ${{ env.EVENT_WRITER_PATH }}
