@@ -227,6 +227,44 @@ jobs:
         env:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
+  retina-win-e2e-bpf-images:
+    name: Build Retina E2E BPF Win Images
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        platform: ["windows"]
+        arch: ["amd64"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-go@v5.3.0
+        with:
+          go-version-file: go.mod
+      - run: go version
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Az CLI login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION }}
+
+      - name: Build Images
+        shell: bash
+        working-directory: test/plugin/event-writer
+        run: |
+          set -euo pipefail
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/microsoft/ebpf-for-windows/main/scripts/Setup-DevEnv.ps1" -OutFile "Setup-DevEnv.ps1" -UseBasicParsing
+
+        env:
+          IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
+
   manifests:
     name: Generate Manifests
     runs-on: ubuntu-latest
