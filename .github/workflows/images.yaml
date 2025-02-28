@@ -228,13 +228,7 @@ jobs:
           IS_MERGE_GROUP: ${{ github.event_name == 'merge_group' }}
 
   manifests:
-    if: ${{
-      needs["retina-images"].result == 'success' &&
-      needs["retina-win-images"].result == 'success' &&
-      needs["operator-images"].result == 'success' &&
-      needs["retina-shell-images"].result == 'success' &&
-      needs["kubectl-retina-images"].result == 'success'
-    }}
+    if: ${{ success('retina-images') && success('retina-win-images') && success('operator-images') && success('retina-shell-images') && success('kubectl-retina-images') }}
     name: Generate Manifests
     runs-on: ubuntu-latest
     needs:
