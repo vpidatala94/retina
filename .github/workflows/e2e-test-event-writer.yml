@@ -21,11 +21,6 @@ jobs:
         platform: ["windows"]
         arch: ["x64"]
 
-    variables:
-      # Path to the solution file relative to the root of the project.
-      MSBUILD_PATH: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\amd64'
-      GITHUB_WORKSPACE: ${{ github.workspace }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
