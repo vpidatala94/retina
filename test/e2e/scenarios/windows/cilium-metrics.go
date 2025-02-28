@@ -85,7 +85,7 @@ func (v *ValidateCiliumMetric) Run() error {
 	// Hardcoding IP addr for aka.ms - 23.213.38.151 - 399845015
 	//aksmsIpaddr := 399845015
 	// Enable
-	cmd := "cd C:\\ && .\\event_writer.exe -event 4 -bpf-sys-path C:\\bpf_event_writer.sys"
+	cmd := "& C:\\event_writer.exe -event 4 -bpf-sys-path C:\\bpf_event_writer.sys"
 	v.ExecCommandInEbpfXdpHpcPod(cmd)
 	return nil
 }
