@@ -117,10 +117,6 @@ int extract_five_tuple_info(void* data, int bytes_to_copy, struct five_tuple* tu
     struct ethhdr *eth;
     uint8_t present = 1;
 
-    if (data == NULL || tup == NULL) {
-        return 1;
-    }
-
     if (bytes_to_copy < sizeof(struct ethhdr)) {
         return 1;
     }
@@ -200,10 +196,6 @@ event_writer(xdp_md_t* ctx) {
     struct five_tuple tup;
     uint32_t size_to_copy = 128;
     uint8_t flt_evttype, present = 1;
-
-    if (ctx->data == NULL || ctx->data_end == NULL) {
-        return XDP_PASS;
-    }
 
     if ((uintptr_t)ctx->data + size_to_copy > (uintptr_t)ctx->data_end) {
 		size_to_copy = (uintptr_t)ctx->data_end - (uintptr_t)ctx->data;
