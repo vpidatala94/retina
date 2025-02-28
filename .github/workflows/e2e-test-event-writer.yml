@@ -33,7 +33,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION }}
 
       - name: Build Images
-        shell: bash
+        shell: cmd
         working-directory: test/plugin/event-writer
         run: |
           set -euo pipefail
