@@ -245,7 +245,7 @@ int main(int argc, char* argv[]) {
         } else if (strcmp(argv[i], "-dstprt") == 0) {
             if (i + 1 < argc)
                 flt.dstprt = static_cast<uint16_t>(atoi(argv[++i]));
-        } else if (strcmp(argv[i], "-bpf_sys_path") == 0) {
+        } else if (strcmp(argv[i], "-bpf-sys-path") == 0) {
             if (i + 1 < argc)
                 bpf_sys_path = static_cast<const char*>(argv[++i]);
         }
@@ -261,7 +261,7 @@ int main(int argc, char* argv[]) {
            (flt.dstIP >> 8) & 0xFF, flt.dstIP & 0xFF);
     printf("Source Port: %u\n", flt.srcprt);
     printf("Destination Port: %u\n", flt.dstprt);
-    printf("bpf_sys_path: %s\n", bpf_sys_path);
+    printf("bpf-sys-path: %s\n", bpf_sys_path);
     printf("Starting event writer\n");
     if (pin_maps_load_programs(bpf_sys_path) != 0) {
         return 1;
