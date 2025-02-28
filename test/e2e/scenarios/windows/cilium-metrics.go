@@ -69,13 +69,12 @@ func (v *ValidateCiliumMetric) ExecCommandInEbpfXdpHpcPod(cmd string) error {
 func (v *ValidateCiliumMetric) InstallEventWriter() error {
 	// Install Event-Writer
 	bpfeventwriterurl := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/bpf_event_writer.sys"
-	eventwriterexeurl := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/event_writer.exe"
-
 	cmd := fmt.Sprintf(`
 		Invoke-WebRequest -Uri "%s" -OutFile "C:\bpf_event_writer.sys" -ErrorAction Stop`, bpfeventwriterurl)
 	v.ExecCommandInEbpfXdpHpcPod(cmd)
-	cmd = fmt.Sprintf(`
-		Invoke-WebRequest -Uri "%s" -OutFile "C:\event_writer.exe" -ErrorAction Stop`, eventwriterexeurl)
+
+	eventwriterexeurl := "https://github.com/vpidatala94/retina/raw/user/vpidatala/POC/8/test/plugin/eventwriter/x64/Release/event_writer.exe"
+	cmd = fmt.Sprintf(`Invoke-WebRequest -Uri "%s" -OutFile "C:\event_writer.exe" -ErrorAction Stop`, eventwriterexeurl)
 	v.ExecCommandInEbpfXdpHpcPod(cmd)
 	return nil
 }
