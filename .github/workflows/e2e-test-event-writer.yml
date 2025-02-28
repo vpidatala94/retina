@@ -26,8 +26,8 @@ jobs:
       MSBUILD_PATH: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\amd64'
       VSVARS64_PATH: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build'
       GITHUB_WORKSPACE: ${{ github.workspace }}
-      SOLUTION_FILE_PATH: ${{ github.workspace }}/test/e2e/tools/eventwriter/event_writer.sln
-      EVENT_WRITER_PATH: ${{ github.workspace }}/test/e2e/tools/eventwriter/
+      SOLUTION_FILE_PATH: ${{ github.workspace }}/test/e2e/tools/event-writer/event_writer.sln
+      EVENT_WRITER_PATH: ${{ github.workspace }}/test/e2e/tools/event-writer/
 
     steps:
       - name: Checkout code
@@ -48,5 +48,5 @@ jobs:
 
       - script: |
           "$(MSBUILD_PATH)\msbuild.exe" /m /p:Configuration=Release /p:Platform=x64 /restore "$(SOLUTION_FILE_PATH)"
-        workingDirectory: $(Build.SourcesDirectory)
+        workingDirectory: ${{env.EVENT_WRITER_PATH}}
         displayName: 'Build Event Writer'
