@@ -36,3 +36,4 @@ jobs:
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/microsoft/ebpf-for-windows/main/scripts/Setup-DevEnv.ps1" -OutFile "Setup-DevEnv.ps1" -UseBasicParsing
+          pwsh -File ./Setup-DevEnv.ps1
