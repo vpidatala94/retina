@@ -33,7 +33,6 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION }}
 
       - name: Build Images
-        shell: cmd
+        shell: pwsh
         run: |
-          set -euo pipefail
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/microsoft/ebpf-for-windows/main/scripts/Setup-DevEnv.ps1" -OutFile "Setup-DevEnv.ps1" -UseBasicParsing
