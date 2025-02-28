@@ -194,6 +194,34 @@ check_filter(struct filter* flt, struct five_tuple* tup) {
 SEC("xdp")
 int
 event_writer(xdp_md_t* ctx) {
+    uint8_t flt_key = 0;
+    uint32_t buf_key = 0;
+    struct filter* flt;
+    struct five_tuple tup;
+    uint32_t size_to_copy = 128;
+    uint8_t flt_evttype, present = 1;
+
+    if (ctx->data == NULL || ctx->data_end == NULL) {
+        return XDP_PASS;
+    }
+
+    if ((uintptr_t)ctx->data + size_to_copy > (uintptr_t)ctx->data_end) {
+		size_to_copy = (uintptr_t)ctx->data_end - (uintptr_t)ctx->data;
+	}
+
+    memset(&tup, 0, sizeof(tup));
+    if (extract_five_tuple_info(ctx->data, size_to_copy, &tup) != 0) {
+        return XDP_PASS;
+    }
+
+    flt = (struct filter*) bpf_map_lookup_elem(&filter_map, &flt_key);
+	if (flt == NULL) {
+		return XDP_PASS;
+	}
+
+    if (check_filter(flt, &tup) != 0) {
+        return XDP_PASS;
+    }
 
     return XDP_PASS;
 }
