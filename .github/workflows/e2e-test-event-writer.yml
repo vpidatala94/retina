@@ -49,6 +49,13 @@ jobs:
           nuget restore .\event_writer.sln
         working-directory: ${{ env.EVENT_WRITER_PATH }}
 
+      - name: Configure eBPF store
+        shell: cmd
+        run: |
+          .\export_program_info.exe --clear
+          .\export_program_info.exe
+        working-directory: ${{ env.EVENT_WRITER_PATH }}\packages\eBPF-for-Windows.0.20.0\build\native\bin
+
       - name: Build Event-Writer
         shell: cmd
         run: |
