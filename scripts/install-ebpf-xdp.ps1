@@ -547,7 +547,7 @@ Function Install-EbpfXdp
       $isSuccess = $false
    }
 
-   Write-Output $isSuccess
+   return $isSuccess
 }
 
 <#
@@ -736,4 +736,4 @@ Function Uninstall-XDP
 
 
 #Script Start
-Install-EbpfXdp
+exit $(Install-EbpfXdp)
