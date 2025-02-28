@@ -49,5 +49,5 @@ jobs:
       - name: Build Event-Writer
         shell: pwsh
         run: |
-          msbuild.exe /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
+          msbuild /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
         working-directory: ${{ env.EVENT_WRITER_PATH }}
