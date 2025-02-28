@@ -194,13 +194,6 @@ check_filter(struct filter* flt, struct five_tuple* tup) {
 SEC("xdp")
 int
 event_writer(xdp_md_t* ctx) {
-    uint8_t flt_key = 0;
-    uint32_t buf_key = 0;
-    struct filter* flt;
-    struct five_tuple tup;
-    uint32_t size_to_copy = 128;
-    uint8_t flt_evttype, present = 1;
-
 
     return XDP_PASS;
 }
