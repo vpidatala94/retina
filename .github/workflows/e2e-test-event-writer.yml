@@ -71,15 +71,10 @@ jobs:
           }
           echo "TAG=$TAG" >> $env:GITHUB_ENV
 
-      - name: ACR Login
-        shell: cmd
-        run: |
-          az acr login -n ${{ vars.ACR_NAME }}
-        working-directory: ${{ env.EVENT_WRITER_PATH }}
-
       - name: Build Images
         shell: cmd
         run: |
-          docker build --file .\Dockerfile --tag ${{ var.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }} .
+          az acr login -n ${{ vars.ACR_NAME }}
+          docker build --file .\Dockerfile --tag ${{ vars.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }} .
           docker push ${{ env.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }}
         working-directory: ${{ env.EVENT_WRITER_PATH }}
