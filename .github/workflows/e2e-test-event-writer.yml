@@ -75,5 +75,5 @@ jobs:
         shell: cmd
         run: |
           az acr login -n ${{ vars.ACR_NAME }}
-          docker buildx build --platform windows/amd64 --file Dockerfile --tag {{ vars.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }} --push .
+          docker buildx build --platform windows/amd64 --file .\Dockerfile --tag ${{ env.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }} --push .
         working-directory: ${{ env.EVENT_WRITER_PATH }}
