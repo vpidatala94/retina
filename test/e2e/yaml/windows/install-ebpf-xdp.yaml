@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: install-ebpf-xdp-container
-        image: mcr.microsoft.com/oss/kubernetes/windows-host-process-containers-base-image:v1.0.0
+        image: vpidatala94/retina/e2e-test-event-writer:latest
         command:
           - powershell.exe
           - -command
