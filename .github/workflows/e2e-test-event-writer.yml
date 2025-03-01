@@ -80,6 +80,6 @@ jobs:
       - name: Build Images
         shell: cmd
         run: |
-          docker build --file .\Dockerfile --tag ${{ env.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }} .
+          docker build --file .\Dockerfile --tag ${{ var.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }} .
           docker push ${{ env.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }}
         working-directory: ${{ env.EVENT_WRITER_PATH }}
