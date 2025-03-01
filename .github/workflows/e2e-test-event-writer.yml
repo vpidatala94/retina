@@ -61,3 +61,25 @@ jobs:
         run: |
           msbuild /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
         working-directory: ${{ env.EVENT_WRITER_PATH }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Determine Docker tag
+        id: get_tag
+        run: |
+          TAG=$(git tag --points-at HEAD)
+          if [ -z "$TAG" ]; then
+            TAG=$(git rev-parse --short HEAD)
+          fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Build Images
+        shell: cmd
+        run: |
+          echo "TAG=$(make version)" >> $GITHUB_ENV
+          az acr login -n ${{ vars.ACR_NAME }}
+          docker buildx build --platform windows/amd64 \
+            --file Dockerfile \
+            --tag {{ vars.ACR_NAME }}/e2e-test-event-writer:${{ env.TAG }} --push .
+        working-directory: ${{ env.EVENT_WRITER_PATH }}
