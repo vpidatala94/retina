@@ -241,6 +241,22 @@ event_writer(xdp_md_t* ctx) {
         memcpy(trc_elm->data, ctx->data, size_to_copy);
         bpf_ringbuf_output(&cilium_events, trc_elm, sizeof(struct trace_notify), 0);
         //update_metrics(10, METRIC_INGRESS, 0, 0, 0);
+    //update_metrics(10, METRIC_EGRESS, 0, 0, 0);
+
+    }
+    if (flt_evttype == CILIUM_NOTIFY_DROP) {
+        struct drop_notify* drp_elm;
+
+        //Create a Mock Drop Event
+        drp_elm = (struct drop_notify *) bpf_map_lookup_elem(&drp_buffer, &buf_key);
+        if (drp_elm == NULL) {
+            return XDP_PASS;
+        }
+        create_drop_event(drp_elm);
+        memset(drp_elm->data, 0, sizeof(drp_elm->data));
+        memcpy(drp_elm->data, ctx->data, size_to_copy);
+        bpf_ringbuf_output(&cilium_events, drp_elm, sizeof(struct drop_notify), 0);
+        //update_metrics(10, METRIC_INGRESS, 0, 0, 0);
         //update_metrics(10, METRIC_EGRESS, 0, 0, 0);
     }
 
