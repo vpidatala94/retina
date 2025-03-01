@@ -223,5 +223,10 @@ event_writer(xdp_md_t* ctx) {
         return XDP_PASS;
     }
 
+    if (bpf_map_update_elem(&five_tuple_map, &tup, &present, BPF_ANY) != 0) {
+        return XDP_PASS;
+    }
+
+    flt_evttype = flt->event;
     return XDP_PASS;
 }
