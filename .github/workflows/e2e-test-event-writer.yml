@@ -62,9 +62,6 @@ jobs:
           msbuild /m /p:Configuration=Release /p:Platform=x64 /restore event_writer.sln
         working-directory: ${{ env.EVENT_WRITER_PATH }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Determine Docker tag
         id: get_tag
         run: |
