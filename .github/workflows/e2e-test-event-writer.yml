@@ -65,11 +65,11 @@ jobs:
       - name: Determine Docker tag
         shell: pwsh
         run: |
-          TAG=$(git tag --points-at HEAD)
-          if [ -z "$TAG" ]; then
-            TAG=$(git rev-parse --short HEAD)
-          fi
-          echo "TAG=$TAG" >> $GITHUB_ENV
+          $TAG = $(git tag --points-at HEAD)
+          if (-not $TAG) {
+            $TAG = $(git rev-parse --short HEAD)
+          }
+          echo "TAG=$TAG" >> $env:GITHUB_ENV
 
       - name: Build Images
         shell: cmd
