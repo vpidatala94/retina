@@ -228,5 +228,21 @@ event_writer(xdp_md_t* ctx) {
     }
 
     flt_evttype = flt->event;
+	if (flt_evttype == CILIUM_NOTIFY_TRACE) {
+        struct trace_notify* trc_elm;
+
+        //Create a Mock Trace Event
+        trc_elm = (struct trace_notify *) bpf_map_lookup_elem(&trc_buffer, &buf_key);
+        if (trc_elm == NULL) {
+            return XDP_PASS;
+        }
+        create_trace_ntfy_event(trc_elm);
+        memset(trc_elm->data, 0, sizeof(trc_elm->data));
+        memcpy(trc_elm->data, ctx->data, size_to_copy);
+        bpf_ringbuf_output(&cilium_events, trc_elm, sizeof(struct trace_notify), 0);
+        //update_metrics(10, METRIC_INGRESS, 0, 0, 0);
+        //update_metrics(10, METRIC_EGRESS, 0, 0, 0);
+    }
+
     return XDP_PASS;
 }
