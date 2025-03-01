@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: install-ebpf-xdp-container
-        image: vpidatala94/retina/e2e-test-event-writer:latest
+        image: demoebpfregeistry/vpidatala94/retina/e2e-test-event-write:latest
         command:
           - powershell.exe
           - -command
