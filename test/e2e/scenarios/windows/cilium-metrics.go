@@ -66,26 +66,12 @@ func (v *ValidateCiliumMetric) ExecCommandInEbpfXdpHpcPod(cmd string) error {
 	return nil
 }
 
-func (v *ValidateCiliumMetric) InstallEventWriter() error {
-	// Install Event-Writer
-	bpfeventwriterurl := "https://github.com/vpidatala94/retina/blob/user/vpidatala/POC/8/test/e2e/tools/eventwriter/x64/Release/bpf_event_writer.sys"
-	cmd := fmt.Sprintf(`
-		Invoke-WebRequest -Uri "%s" -OutFile "C:\bpf_event_writer.sys" -ErrorAction Stop`, bpfeventwriterurl)
-	v.ExecCommandInEbpfXdpHpcPod(cmd)
-
-	eventwriterexeurl := "https://github.com/vpidatala94/retina/blob/user/vpidatala/POC/8/test/e2e/tools/eventwriter/x64/Release/event_writer.exe"
-	cmd = fmt.Sprintf(`Invoke-WebRequest -Uri "%s" -OutFile "C:\event_writer.exe" -ErrorAction Stop`, eventwriterexeurl)
-	v.ExecCommandInEbpfXdpHpcPod(cmd)
-	return nil
-}
-
 func (v *ValidateCiliumMetric) Run() error {
-	v.InstallEventWriter()
 	time.Sleep(10 * time.Minute)
 	// Hardcoding IP addr for aka.ms - 23.213.38.151 - 399845015
 	//aksmsIpaddr := 399845015
 	// Enable
-	cmd := "& C:\\event_writer.exe -event 4 -bpf-sys-path C:\\bpf_event_writer.sys"
+	cmd := "& .\\event_writer.exe -event 4 -bpf-sys-path .\\bpf_event_writer.sys"
 	v.ExecCommandInEbpfXdpHpcPod(cmd)
 	return nil
 }
