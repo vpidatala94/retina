@@ -63,7 +63,10 @@ jobs:
         working-directory: ${{ env.EVENT_WRITER_PATH }}
 
       - name: Determine Docker tag
-        id: get_tag
+        shell: pwsh
+        run: |
+          - name: Determine Docker tag
+        shell: pwsh
         run: |
           TAG=$(git tag --points-at HEAD)
           if [ -z "$TAG" ]; then
