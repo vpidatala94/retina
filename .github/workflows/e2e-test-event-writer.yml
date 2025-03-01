@@ -65,9 +65,6 @@ jobs:
       - name: Determine Docker tag
         shell: pwsh
         run: |
-          - name: Determine Docker tag
-        shell: pwsh
-        run: |
           TAG=$(git tag --points-at HEAD)
           if [ -z "$TAG" ]; then
             TAG=$(git rev-parse --short HEAD)
