@@ -10,8 +10,8 @@ os:
 operator:
   name: retina-operator
   enabled: false
-  repository: demoebpfregistry.azurecr.io/vpidatala94/retina/retina-operator
-  tag: "4c3d745"
+  repository: ghcr.io/microsoft/retina/retina-operator
+  tag: "v0.0.2"
   installCRDs: true
   enableRetinaEndpoint: false
   resources:
@@ -30,11 +30,11 @@ operator:
   telemetryInterval: "5m"
 
 image:
-  repository: demoebpfregistry.azurecr.io/vpidatala94/retina/retina-agent
-  initRepository: demoebpfregistry.azurecr.io/vpidatala94/retina/retina-init
+  repository: ghcr.io/microsoft/retina/retina-agent
+  initRepository: ghcr.io/microsoft/retina/retina-init
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "4c3d745"
+  tag: "v0.0.2"
 
 enableConntrackMetrics: false
 enablePodLevel: true
