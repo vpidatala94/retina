@@ -209,7 +209,6 @@ func (v *ValidateWinBpfMetric) Run() error {
 		return fmt.Errorf("failed to curl to example.com")
 	}
 
-	// TBR
 	fmt.Println("Waiting for basic metrics to be updated as part of next polling cycle")
 	time.Sleep(60 * time.Second)
 	promOutput, err = v.GetPromMetrics(ebpfLabelSelector)
@@ -219,7 +218,6 @@ func (v *ValidateWinBpfMetric) Run() error {
 	if promOutput == "" {
 		return fmt.Errorf("post test - failed to get prometheus metrics")
 	}
-	fmt.Println(promOutput)
 	postTestFwdCount, _ := prom.GetMetricGuageValueFromBuffer([]byte(promOutput), "networkobservability_forward_count", fwd_labels)
 	fmt.Printf("Metric value %f, labels: %v\n", preTestFwdBytes, fwd_labels)
 
