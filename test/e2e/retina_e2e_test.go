@@ -32,29 +32,9 @@ func TestE2ERetina(t *testing.T) {
 	err = jobs.LoadGenericFlags().Run()
 	require.NoError(t, err, "failed to load generic flags")
 
-<<<<<<< HEAD
-	// Install Ebpf and XDP
-	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
-	installEbpfAndXDP.Run(ctx)
-
-	t.Cleanup(func() {
-		if *common.DeleteInfra {
-			_ = jobs.DeleteTestInfra(subID, rg, clusterName, location).Run()
-		}
-	})
-=======
 	if *common.KubeConfig == "" {
 		*common.KubeConfig = infra.CreateAzureTempK8sInfra(ctx, t, rootDir)
 	}
->>>>>>> af4b65b592eebd995d53c7d263a1af14636590ce
-
-	time.Sleep(10 * time.Minute)
-
-	// Install Ebpf and XDP
-	installEventWriter := types.NewRunner(t, jobs.InstallEventWriter(kubeConfigFilePath))
-	installEventWriter.Run(ctx)
-
-	time.Sleep(10 * time.Minute)
 
 	// Install and test Retina basic metrics
 	basicMetricsE2E := types.NewRunner(t,
@@ -65,11 +45,6 @@ func TestE2ERetina(t *testing.T) {
 	)
 	basicMetricsE2E.Run(ctx)
 
-<<<<<<< HEAD
-	time.Sleep(10 * time.Minute)
-	//Upgrade and test Retina with advanced metrics
-	advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
-=======
 	// Upgrade and test Retina with advanced metrics
 	advanceMetricsE2E := types.NewRunner(t,
 		jobs.UpgradeAndTestRetinaAdvancedMetrics(
@@ -78,7 +53,6 @@ func TestE2ERetina(t *testing.T) {
 			common.RetinaAdvancedProfilePath(rootDir),
 			common.TestPodNamespace),
 	)
->>>>>>> af4b65b592eebd995d53c7d263a1af14636590ce
 	advanceMetricsE2E.Run(ctx)
 
 	// Install and test Hubble basic metrics
