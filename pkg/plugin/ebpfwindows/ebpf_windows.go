@@ -142,13 +142,13 @@ func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint32) int {
 func ensureRetinaEbpfApiDLLPresent() error {
 	src := `C:\hpc\retinaebpfapi.dll`
 	if _, err := os.Stat(src); os.IsNotExist(err) {
-		return fmt.Errorf("Error: retinaebpfapi.dll not found at %s", src)
+		return fmt.Errorf("error retinaebpfapi.dll not found at %s", src)
 	}
 
 	oldPath := os.Getenv("PATH")
 	newPath := oldPath + ";" + "C:\\Program Files\\ebpf-for-windows\\"
 	if err := os.Setenv("PATH", newPath); err != nil {
-		fmt.Println("Error setting PATH environment variable: %v")
+		return fmt.Errorf("error setting PATH environment variable")
 	}
 
 	return nil
