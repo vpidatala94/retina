@@ -1,5 +1,5 @@
-# mcr.microsoft.com/oss/go/microsoft/golang:1.23.1-cbl-mariner2.0
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang@sha256:8ac5373de7fde69d08c52e4a1ba40e976a543b3e93196f7fe07c3f91853865f3 AS builder
+# mcr.microsoft.com/oss/go/microsoft/golang:1.23.5-cbl-mariner2.0
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang@sha256:ef39e430a97a61bec3395adb673a7c5611d2212f14abe40da21cbfd11a9d6e9d AS builder
 
 
 ARG VERSION

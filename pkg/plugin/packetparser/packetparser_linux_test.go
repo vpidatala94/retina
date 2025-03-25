@@ -37,6 +37,7 @@ var (
 	cfgPodLevelEnabled = &kcfg.Config{
 		EnablePodLevel:           true,
 		BypassLookupIPOfInterest: true,
+		EnableConntrackMetrics:   false,
 	}
 	cfgPodLevelDisabled = &kcfg.Config{
 		EnablePodLevel: false,
@@ -48,6 +49,12 @@ var (
 	cfgDataAggregationLevelHigh = &kcfg.Config{
 		EnablePodLevel:       true,
 		DataAggregationLevel: kcfg.High,
+	}
+	cfgConntrackMetricsEnabled = &kcfg.Config{
+		EnablePodLevel:           true,
+		DataAggregationLevel:     kcfg.High,
+		BypassLookupIPOfInterest: true,
+		EnableConntrackMetrics:   true,
 	}
 )
 
@@ -155,18 +162,24 @@ func TestEndpointWatcherCallbackFn_EndpointDeleted(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	// Initialize packetParser with both maps.
 	p := &packetParser{
 		cfg:              cfgPodLevelEnabled,
 		l:                log.Logger().Named("test"),
 		interfaceLockMap: &sync.Map{},
+		tcMap:            &sync.Map{},
 	}
-	p.tcMap = &sync.Map{}
+
+	// Create test interface attributes.
 	linkAttr := netlink.LinkAttrs{
 		Name:         "test",
 		HardwareAddr: []byte("test"),
 		NetNsID:      1,
 	}
 	key := ifaceToKey(linkAttr)
+
+	// Pre-populate both maps to simulate existing interface
+	p.interfaceLockMap.Store(key, &sync.Mutex{})
 	p.tcMap.Store(key, &tcValue{nil, &tc.Object{}})
 
 	// Create EndpointDeleted event.
@@ -175,10 +188,16 @@ func TestEndpointWatcherCallbackFn_EndpointDeleted(t *testing.T) {
 		Obj:  linkAttr,
 	}
 
+	// Execute the callback.
 	p.endpointWatcherCallbackFn(e)
 
-	_, ok := p.tcMap.Load(key)
-	assert.False(t, ok)
+	// Verify both maps are cleaned up.
+	_, tcMapExists := p.tcMap.Load(key)
+	_, lockMapExists := p.interfaceLockMap.Load(key)
+
+	// Assert both maps are cleaned up
+	assert.False(t, tcMapExists, "tcMap entry should be deleted")
+	assert.False(t, lockMapExists, "interfaceLockMap entry should be deleted")
 }
 
 func TestCreateQdiscAndAttach(t *testing.T) {
@@ -533,30 +552,60 @@ func TestPacketParseGenerate(t *testing.T) {
 	currDir := path.Dir(filename)
 	dynamicHeaderPath := fmt.Sprintf("%s/%s/%s", currDir, bpfSourceDir, dynamicHeaderFileName)
 
-	// Instantiate the packetParser struct with a mocked logger and context.
-	p := &packetParser{
-		cfg: cfgPodLevelEnabled,
-		l:   log.Logger().Named(name),
+	tests := []struct {
+		name             string
+		cfg              *kcfg.Config
+		expectedContents string
+	}{
+		{
+			name:             "PodLevelEnabled",
+			cfg:              cfgPodLevelEnabled,
+			expectedContents: "#define BYPASS_LOOKUP_IP_OF_INTEREST 1\n#define DATA_AGGREGATION_LEVEL 0\n",
+		},
+		{
+			name:             "ConntrackMetricsEnabled",
+			cfg:              cfgConntrackMetricsEnabled,
+			expectedContents: "#define BYPASS_LOOKUP_IP_OF_INTEREST 1\n#define ENABLE_CONNTRACK_METRICS 1\n#define DATA_AGGREGATION_LEVEL 1\n",
+		},
+		{
+			name:             "DataAggregationLevelLow",
+			cfg:              cfgDataAggregationLevelLow,
+			expectedContents: "#define DATA_AGGREGATION_LEVEL 0\n",
+		},
+		{
+			name:             "DataAggregationLevelHigh",
+			cfg:              cfgDataAggregationLevelHigh,
+			expectedContents: "#define DATA_AGGREGATION_LEVEL 1\n",
+		},
 	}
-	ctx := context.Background()
 
-	// Call the Generate function and check if it returns an error.
-	if err := p.Generate(ctx); err != nil {
-		t.Fatalf("failed to generate PacketParser header: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Instantiate the packetParser struct with a mocked logger and context.
+			p := &packetParser{
+				cfg: tt.cfg,
+				l:   log.Logger().Named(name),
+			}
+			ctx := context.Background()
 
-	// Verify that the dynamic header file was created in the expected location and contains the expected contents.
-	if _, err := os.Stat(dynamicHeaderPath); os.IsNotExist(err) {
-		t.Fatalf("dynamic header file does not exist: %v", err)
-	}
+			// Call the Generate function and check if it returns an error.
+			if err := p.Generate(ctx); err != nil {
+				t.Fatalf("failed to generate PacketParser header: %v", err)
+			}
 
-	expectedContents := "#define BYPASS_LOOKUP_IP_OF_INTEREST 1\n#define DATA_AGGREGATION_LEVEL 0\n"
-	actualContents, err := os.ReadFile(dynamicHeaderPath)
-	if err != nil {
-		t.Fatalf("failed to read dynamic header file: %v", err)
-	}
-	if string(actualContents) != expectedContents {
-		t.Errorf("unexpected dynamic header file contents: got %q, want %q", string(actualContents), expectedContents)
+			// Verify that the dynamic header file was created in the expected location and contains the expected contents.
+			if _, err := os.Stat(dynamicHeaderPath); os.IsNotExist(err) {
+				t.Fatalf("dynamic header file does not exist: %v", err)
+			}
+
+			actualContents, err := os.ReadFile(dynamicHeaderPath)
+			if err != nil {
+				t.Fatalf("failed to read dynamic header file: %v", err)
+			}
+			if string(actualContents) != tt.expectedContents {
+				t.Errorf("unexpected dynamic header file contents: got %q, want %q", string(actualContents), tt.expectedContents)
+			}
+		})
 	}
 }
 

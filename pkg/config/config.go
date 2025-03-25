@@ -16,9 +16,16 @@ import (
 // Level defines the level of monitor aggregation.
 type Level int
 
+const MinTelemetryInterval time.Duration = 2 * time.Minute
+
 const (
 	Low Level = iota
 	High
+)
+
+var (
+	ErrorTelemetryIntervalTooSmall = fmt.Errorf("telemetryInterval smaller than %v is not allowed", MinTelemetryInterval)
+	DefaultTelemetryInterval       = 15 * time.Minute
 )
 
 func (l *Level) UnmarshalText(text []byte) error {
@@ -61,11 +68,13 @@ type Config struct {
 	EnableTelemetry          bool          `yaml:"enableTelemetry"`
 	EnableRetinaEndpoint     bool          `yaml:"enableRetinaEndpoint"`
 	EnablePodLevel           bool          `yaml:"enablePodLevel"`
+	EnableConntrackMetrics   bool          `yaml:"enableConntrackMetrics"`
 	RemoteContext            bool          `yaml:"remoteContext"`
 	EnableAnnotations        bool          `yaml:"enableAnnotations"`
 	BypassLookupIPOfInterest bool          `yaml:"bypassLookupIPOfInterest"`
 	DataAggregationLevel     Level         `yaml:"dataAggregationLevel"`
 	MonitorSockPath          string        `yaml:"monitorSockPath"`
+	TelemetryInterval        time.Duration `yaml:"telemetryInterval"`
 }
 
 func GetConfig(cfgFilename string) (*Config, error) {
@@ -104,6 +113,14 @@ func GetConfig(cfgFilename string) (*Config, error) {
 	} else if config.MetricsInterval != 0 {
 		config.MetricsInterval *= time.Second
 		log.Print("metricsInterval is deprecated, please use metricsIntervalDuration instead")
+	}
+
+	// If unset, default telemetry interval to 15 minutes.
+	if config.TelemetryInterval == 0 {
+		log.Printf("telemetryInterval is not set, defaulting to %v", DefaultTelemetryInterval)
+		config.TelemetryInterval = DefaultTelemetryInterval
+	} else if config.TelemetryInterval < MinTelemetryInterval {
+		return nil, ErrorTelemetryIntervalTooSmall
 	}
 
 	return &config, nil
