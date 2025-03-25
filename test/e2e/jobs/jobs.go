@@ -20,7 +20,6 @@ import (
 
 func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string, createInfra bool) *types.Job {
 	job := types.NewJob("Create e2e test infrastructure")
-
 	if createInfra {
 		job.AddStep(&azure.CreateResourceGroup{
 			SubscriptionID:    subID,
@@ -106,6 +105,18 @@ func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
 	return job
 }
 
+func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Install EBPF and XDP")
+	job.AddStep(&kubernetes.CreateNamespace{
+		KubeConfigFilePath: kubeConfigFilePath,
+		Namespace:          "install-ebpf-xdp"}, nil)
+
+	job.AddStep(&kubernetes.ApplyYamlConfig{
+		YamlFilePath: "yaml/windows/install-ebpf-xdp.yaml",
+	}, nil)
+	return job
+}
+
 func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, testPodNamespace string) *types.Job {
 	job := types.NewJob("Install and test Retina with basic metrics")
 
@@ -179,6 +190,7 @@ func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, test
 
 func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFilePath string, testPodNamespace string) *types.Job {
 	job := types.NewJob("Upgrade and test Retina with advanced metrics")
+
 	// enable advanced metrics
 	job.AddStep(&kubernetes.UpgradeRetinaHelmChart{
 		Namespace:          common.KubeSystemNamespace,
