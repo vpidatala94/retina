@@ -36,7 +36,6 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "4c3d745"
 
-enableConntrackMetrics: false
 enablePodLevel: true
 remoteContext: false
 enableAnnotations: true
