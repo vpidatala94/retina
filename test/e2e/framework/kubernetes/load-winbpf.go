@@ -54,7 +54,6 @@ func ExecCommandInWinPod(KubeConfigFilePath string, cmd string, Namespace string
 	}
 
 	var outputBytes []byte
-	attempt := 0
 	err = defaultRetrier.Do(ctx, func() error {
 		outputBytes, err = ExecPod(ctx, clientset, config, windowsPod.Namespace, windowsPod.Name, cmd)
 		if err != nil {
@@ -64,9 +63,6 @@ func ExecCommandInWinPod(KubeConfigFilePath string, cmd string, Namespace string
 		if len(outputBytes) == 0 {
 			return fmt.Errorf("no output from command")
 		}
-
-		fmt.Printf("Attempt %d: %s\n", attempt, string(outputBytes))
-		attempt++
 		return nil
 	})
 

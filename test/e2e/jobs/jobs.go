@@ -15,7 +15,6 @@ import (
 
 func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string, createInfra bool) *types.Job {
 	job := types.NewJob("Create e2e test infrastructure")
-	createInfra = false
 	if createInfra {
 		job.AddStep(&azure.CreateResourceGroup{
 			SubscriptionID:    subID,
@@ -106,7 +105,11 @@ func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
 }
 
 func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
+<<<<<<< HEAD
 	job := types.NewJob("Install ebpf and xdp")
+=======
+	job := types.NewJob("Install EBPF and XDP")
+>>>>>>> user/vpidatala/e2e-comp-tests-#1
 	job.AddStep(&kubernetes.CreateNamespace{
 		KubeConfigFilePath: kubeConfigFilePath,
 		Namespace:          "install-ebpf-xdp"}, nil)
@@ -190,6 +193,7 @@ func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, test
 
 func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFilePath string, testPodNamespace string) *types.Job {
 	job := types.NewJob("Upgrade and test Retina with advanced metrics")
+<<<<<<< HEAD
 	/*
 		// enable advanced metrics
 		job.AddStep(&kubernetes.UpgradeRetinaHelmChart{
@@ -200,6 +204,18 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 			TagEnv:             generic.DefaultTagEnv,
 			ValuesFile:         valuesFilePath,
 		}, nil)
+=======
+
+	// enable advanced metrics
+	job.AddStep(&kubernetes.UpgradeRetinaHelmChart{
+		Namespace:          common.KubeSystemNamespace,
+		ReleaseName:        "retina",
+		KubeConfigFilePath: kubeConfigFilePath,
+		ChartPath:          chartPath,
+		TagEnv:             generic.DefaultTagEnv,
+		ValuesFile:         valuesFilePath,
+	}, nil)
+>>>>>>> user/vpidatala/e2e-comp-tests-#1
 
 		dnsScenarios := []struct {
 			name string
@@ -240,13 +256,54 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 					ReturnCode:  "NXDOMAIN",
 				},
 			},
+<<<<<<< HEAD
+=======
+		},
+		{
+			name: "Validate advanced DNS request and response metrics for a non-existent domain",
+			req: &dns.RequestValidationParams{
+				NumResponse: "0",
+				Query:       "some.non.existent.domain.",
+				QueryType:   "A",
+				Command:     "nslookup some.non.existent.domain.",
+				ExpectError: true,
+			},
+			resp: &dns.ResponseValidationParams{
+				NumResponse: "0",
+				Query:       "some.non.existent.domain.",
+				QueryType:   "A",
+				Response:    dns.EmptyResponse, // hacky way to bypass the framework for now
+				ReturnCode:  "NXDOMAIN",
+			},
+		},
+	}
+
+	// Validate Windows BPF Metrics
+	job.AddStep(&kubernetes.ApplyYamlConfig{
+		YamlFilePath: "yaml/windows/non-hpc-pod.yaml",
+	}, nil)
+	time.Sleep(2 * time.Minute)
+
+	for _, arch := range common.Architectures {
+		for _, scenario := range dnsScenarios {
+			name := scenario.name + " - Arch: " + arch
+			job.AddScenario(dns.ValidateAdvancedDNSMetrics(name, scenario.req, scenario.resp, kubeConfigFilePath, testPodNamespace, arch))
+>>>>>>> user/vpidatala/e2e-comp-tests-#1
 		}
 
+<<<<<<< HEAD
 		// Validate Windows BPF Metrics
 		job.AddStep(&kubernetes.ApplyYamlConfig{
 			YamlFilePath: "yaml/windows/non-hpc-pod.yaml",
 		}, nil)
 		time.Sleep(2 * time.Minute)
+=======
+	job.AddScenario(windows.ValidateWindowsBasicMetric())
+
+	job.AddScenario(windows.ValidateWinBpfMetricScenario())
+
+	job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
+>>>>>>> user/vpidatala/e2e-comp-tests-#1
 
 		for _, arch := range common.Architectures {
 			for _, scenario := range dnsScenarios {
@@ -303,6 +360,28 @@ func LoadGenericFlags() *types.Job {
 		TagEnv:            generic.DefaultTagEnv,
 		ImageNamespaceEnv: generic.DefaultImageNamespace,
 		ImageRegistryEnv:  generic.DefaultImageRegistry,
+	}, nil)
+
+	return job
+}
+
+func LoadAndPinWinBPFJob(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Load Windows BPF Maps")
+	job.AddStep(&kubernetes.LoadAndPinWinBPF{
+		KubeConfigFilePath:                 kubeConfigFilePath,
+		LoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
+		LoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
+	}, nil)
+
+	return job
+}
+
+func UnLoadAndPinWinBPFJob(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Unload Windows BPF Maps")
+	job.AddStep(&kubernetes.UnLoadAndPinWinBPF{
+		KubeConfigFilePath:                   kubeConfigFilePath,
+		UnLoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
+		UnLoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
 	}, nil)
 
 	return job

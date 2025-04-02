@@ -55,14 +55,6 @@ goto :EOF
    curl http://%2
    goto :EOF
 
-:EventWriter-Dump
-   type C:\event_writer.out
-   goto :EOF
-
-:EventWriter-CurlOut
-   type C:\curl.out
-   goto :EOF
-
 :EventWriter-GetPodIpAddress
    powershell -command "Get-NetIPAddress | Where-Object {$_.AddressFamily -eq 'IPv4' -and $_.IPAddress -ne '127.0.0.1'} | Select-Object -ExpandProperty IPAddress"
    goto :EOF
