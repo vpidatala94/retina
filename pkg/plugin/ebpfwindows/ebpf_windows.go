@@ -5,13 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-<<<<<<< HEAD
-	"syscall"
-=======
 	"strings"
->>>>>>> user/vpidatala/ebpfwindows
 	"time"
-
 	"unsafe"
 
 	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
@@ -45,10 +40,6 @@ const (
 var (
 	ErrInvalidEventData = errors.New("The Event Data is invalid")
 	ErrNilEnricher      = errors.New("enricher is nil")
-<<<<<<< HEAD
-	retinaEbpfApi       = syscall.NewLazyDLL("retinaebpfapi.dll")
-=======
->>>>>>> user/vpidatala/ebpfwindows
 )
 
 // Plugin is the ebpfwindows plugin
@@ -123,11 +114,7 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 		if key.IsEgress() {
 			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Bytes()))
 			p.l.Debug("emitting bytes sent count metric", zap.Uint64(bytesSent, value.Bytes()))
-<<<<<<< HEAD
-			metrics.ForwardBytesGauge.WithLabelValues(packetsSent).Set(float64(value.Count()))
-=======
 			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Count()))
->>>>>>> user/vpidatala/ebpfwindows
 			p.l.Debug("emitting packets sent count metric", zap.Uint64(packetsSent, value.Count()))
 		} else if key.IsIngress() {
 			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Count()))
@@ -150,18 +137,6 @@ func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint32) int {
 	return 0
 }
 
-<<<<<<< HEAD
-func ensureRetinaEbpfApiDLLPresent() error {
-	src := `C:\hpc\retinaebpfapi.dll`
-	if _, err := os.Stat(src); os.IsNotExist(err) {
-		return fmt.Errorf("error retinaebpfapi.dll not found at %s", src)
-	}
-
-	oldPath := os.Getenv("PATH")
-	newPath := oldPath + ";" + "C:\\Program Files\\ebpf-for-windows\\"
-	if err := os.Setenv("PATH", newPath); err != nil {
-		return fmt.Errorf("error setting PATH environment variable")
-=======
 func addEbpfToPath() error {
 	currPath := os.Getenv("PATH")
 	if strings.Contains(currPath, "ebpf-for-windows") {
@@ -172,25 +147,16 @@ func addEbpfToPath() error {
 	newPath := currPath + ";" + ebpfWindowsPath
 	if err := os.Setenv("PATH", newPath); err != nil {
 		return fmt.Errorf("error setting PATH environment variable: %v", err)
->>>>>>> user/vpidatala/ebpfwindows
 	}
 
 	return nil
 }
 
-<<<<<<< HEAD
-// pullCiliumeBPFMetrics is the function that is called periodically by the timer.
-=======
->>>>>>> user/vpidatala/ebpfwindows
 func (p *Plugin) pullMetricsAndEvents(ctx context.Context) {
 	eventsMap := NewEventsMap()
 	metricsMap := NewMetricsMap()
 
-<<<<<<< HEAD
-	err := ensureRetinaEbpfApiDLLPresent()
-=======
 	err := addEbpfToPath()
->>>>>>> user/vpidatala/ebpfwindows
 	if err != nil {
 		return
 	}
