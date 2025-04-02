@@ -105,11 +105,7 @@ func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
 }
 
 func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
-<<<<<<< HEAD
-	job := types.NewJob("Install ebpf and xdp")
-=======
 	job := types.NewJob("Install EBPF and XDP")
->>>>>>> user/vpidatala/e2e-comp-tests-#1
 	job.AddStep(&kubernetes.CreateNamespace{
 		KubeConfigFilePath: kubeConfigFilePath,
 		Namespace:          "install-ebpf-xdp"}, nil)
@@ -193,18 +189,6 @@ func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, test
 
 func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFilePath string, testPodNamespace string) *types.Job {
 	job := types.NewJob("Upgrade and test Retina with advanced metrics")
-<<<<<<< HEAD
-	/*
-		// enable advanced metrics
-		job.AddStep(&kubernetes.UpgradeRetinaHelmChart{
-			Namespace:          common.KubeSystemNamespace,
-			ReleaseName:        "retina",
-			KubeConfigFilePath: kubeConfigFilePath,
-			ChartPath:          chartPath,
-			TagEnv:             generic.DefaultTagEnv,
-			ValuesFile:         valuesFilePath,
-		}, nil)
-=======
 
 	// enable advanced metrics
 	job.AddStep(&kubernetes.UpgradeRetinaHelmChart{
@@ -215,7 +199,6 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 		TagEnv:             generic.DefaultTagEnv,
 		ValuesFile:         valuesFilePath,
 	}, nil)
->>>>>>> user/vpidatala/e2e-comp-tests-#1
 
 		dnsScenarios := []struct {
 			name string
@@ -256,8 +239,6 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 					ReturnCode:  "NXDOMAIN",
 				},
 			},
-<<<<<<< HEAD
-=======
 		},
 		{
 			name: "Validate advanced DNS request and response metrics for a non-existent domain",
@@ -288,22 +269,13 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 		for _, scenario := range dnsScenarios {
 			name := scenario.name + " - Arch: " + arch
 			job.AddScenario(dns.ValidateAdvancedDNSMetrics(name, scenario.req, scenario.resp, kubeConfigFilePath, testPodNamespace, arch))
->>>>>>> user/vpidatala/e2e-comp-tests-#1
 		}
 
-<<<<<<< HEAD
-		// Validate Windows BPF Metrics
-		job.AddStep(&kubernetes.ApplyYamlConfig{
-			YamlFilePath: "yaml/windows/non-hpc-pod.yaml",
-		}, nil)
-		time.Sleep(2 * time.Minute)
-=======
 	job.AddScenario(windows.ValidateWindowsBasicMetric())
 
 	job.AddScenario(windows.ValidateWinBpfMetricScenario())
 
 	job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
->>>>>>> user/vpidatala/e2e-comp-tests-#1
 
 		for _, arch := range common.Architectures {
 			for _, scenario := range dnsScenarios {
