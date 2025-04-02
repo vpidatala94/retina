@@ -256,7 +256,9 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 		}
 
 		job.AddScenario(windows.ValidateWindowsBasicMetric())
+
 	*/
+
 	job.AddScenario(windows.ValidateWinBpfMetricScenario())
 	/*
 		job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
