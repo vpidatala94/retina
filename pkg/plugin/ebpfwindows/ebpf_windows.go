@@ -226,41 +226,20 @@ func (p *Plugin) Generate(context.Context) error {
 func formatHexDump(data []byte) string {
 	var sb strings.Builder
 
-	for i := 0; i < len(data); i += 16 {
-		// Print offset
-		fmt.Fprintf(&sb, "%04x: ", i)
+	// Limit output to avoid huge logs
+	maxBytes := len(data)
+	if maxBytes > 256 {
+		maxBytes = 256
+		fmt.Fprintf(&sb, "First 256 of %d bytes:\n", len(data))
+	}
 
-		// Print hex representation
-		for j := 0; j < 16; j++ {
-			if i+j < len(data) {
-				fmt.Fprintf(&sb, "%02x ", data[i+j])
-			} else {
-				sb.WriteString("   ")
-			}
-			if j == 7 {
-				sb.WriteString(" ")
-			}
+	// Print hex values in groups of 16 per line
+	for i := 0; i < maxBytes; i += 16 {
+		// Print only hex values without offset
+		for j := 0; j < 16 && i+j < maxBytes; j++ {
+			fmt.Fprintf(&sb, "%02x ", data[i+j])
 		}
-
-		// Print ASCII representation
-		sb.WriteString(" |")
-		for j := 0; j < 16; j++ {
-			if i+j < len(data) {
-				if data[i+j] >= 32 && data[i+j] <= 126 {
-					sb.WriteByte(data[i+j])
-				} else {
-					sb.WriteByte('.')
-				}
-			} else {
-				sb.WriteByte(' ')
-			}
-		}
-		sb.WriteString("|\n")
-
-		// Don't print empty lines
-		if i+16 >= len(data) {
-			break
-		}
+		sb.WriteString("\n")
 	}
 
 	return sb.String()
@@ -270,11 +249,6 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 	if uintptr(size) < unsafe.Sizeof(uint8(0)) {
 		return ErrInvalidEventData
 	}
-
-	dataBytes := unsafe.Slice((*byte)(data), size)
-	hexDump := formatHexDump(dataBytes)
-	p.l.Debug("Event data hex dump", zap.String("hexdump", hexDump))
-
 	eventType := *(*uint8)(data)
 	switch eventType {
 	case NotifyDrop:
@@ -313,6 +287,11 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 			p.l.Error("Could not convert event to flow", zap.Any("handleTraceEvent", data), zap.Error(err))
 			return ErrInvalidEventData
 		}
+		pktdata := (*TraceNotify)(data).Data
+		hexDump := formatHexDump(pktdata[:])
+		p.l.Debug("Packet data hex dump",
+			zap.String("hexDump", hexDump))
+
 		meta := &utils.RetinaMetadata{}
 		// Add packet size to the flow's metadata.
 		utils.AddPacketSize(meta, 128)
