@@ -223,14 +223,57 @@ func (p *Plugin) Generate(context.Context) error {
 	return nil
 }
 
+func formatHexDump(data []byte) string {
+	var sb strings.Builder
+
+	for i := 0; i < len(data); i += 16 {
+		// Print offset
+		fmt.Fprintf(&sb, "%04x: ", i)
+
+		// Print hex representation
+		for j := 0; j < 16; j++ {
+			if i+j < len(data) {
+				fmt.Fprintf(&sb, "%02x ", data[i+j])
+			} else {
+				sb.WriteString("   ")
+			}
+			if j == 7 {
+				sb.WriteString(" ")
+			}
+		}
+
+		// Print ASCII representation
+		sb.WriteString(" |")
+		for j := 0; j < 16; j++ {
+			if i+j < len(data) {
+				if data[i+j] >= 32 && data[i+j] <= 126 {
+					sb.WriteByte(data[i+j])
+				} else {
+					sb.WriteByte('.')
+				}
+			} else {
+				sb.WriteByte(' ')
+			}
+		}
+		sb.WriteString("|\n")
+
+		// Don't print empty lines
+		if i+16 >= len(data) {
+			break
+		}
+	}
+
+	return sb.String()
+}
+
 func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 	if uintptr(size) < unsafe.Sizeof(uint8(0)) {
 		return ErrInvalidEventData
 	}
 
 	dataBytes := unsafe.Slice((*byte)(data), size)
-    hexDump := formatHexDump(dataBytes)
-    p.l.Debug("Event data hex dump", zap.String("hexdump", hexDump))
+	hexDump := formatHexDump(dataBytes)
+	p.l.Debug("Event data hex dump", zap.String("hexdump", hexDump))
 
 	eventType := *(*uint8)(data)
 	switch eventType {
