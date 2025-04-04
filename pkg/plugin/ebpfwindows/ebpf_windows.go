@@ -227,6 +227,11 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 	if uintptr(size) < unsafe.Sizeof(uint8(0)) {
 		return ErrInvalidEventData
 	}
+
+	dataBytes := unsafe.Slice((*byte)(data), size)
+    hexDump := formatHexDump(dataBytes)
+    p.l.Debug("Event data hex dump", zap.String("hexdump", hexDump))
+
 	eventType := *(*uint8)(data)
 	switch eventType {
 	case NotifyDrop:
