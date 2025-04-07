@@ -58,16 +58,6 @@ func TestE2ERetina(t *testing.T) {
 	createTestInfra := types.NewRunner(t, jobs.CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath, *common.CreateInfra))
 	createTestInfra.Run(ctx)
 
-	// Install Ebpf and XDP
-	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
-	installEbpfAndXDP.Run(ctx)
-
-	time.Sleep(10 * time.Minute)
-
-	// Load BPF Maps
-	loadWinBPFMapsJob := types.NewRunner(t, jobs.LoadWinBPFMapsJob(kubeConfigFilePath))
-	loadWinBPFMapsJob.Run(ctx)
-
 	t.Cleanup(func() {
 		if *common.DeleteInfra {
 			_ = jobs.DeleteTestInfra(subID, rg, clusterName, location).Run()
@@ -81,6 +71,21 @@ func TestE2ERetina(t *testing.T) {
 	//Upgrade and test Retina with advanced metrics
 	advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
 	advanceMetricsE2E.Run(ctx)
+
+	// Install and test Retina with Win BPF metrics
+	// Install Ebpf and XDP
+	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
+	installEbpfAndXDP.Run(ctx)
+
+	time.Sleep(10 * time.Minute)
+
+	// Load BPF Maps
+	loadWinBPFMapsJob := types.NewRunner(t, jobs.LoadWinBPFMapsJob(kubeConfigFilePath))
+	loadWinBPFMapsJob.Run(ctx)
+
+	winBPFMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath, chartPath, common.TestPodNamespace))
+	winBPFMetricsE2E.Run(ctx)
+
 
 	// Install and test Hubble basic metrics
 	validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
