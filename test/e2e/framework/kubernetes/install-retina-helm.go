@@ -13,6 +13,8 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
+	helmValues "helm.sh/helm/v3/pkg/cli/values"
+	"helm.sh/helm/v3/pkg/getter"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -34,6 +36,7 @@ type InstallHelmChart struct {
 	ChartPath          string
 	TagEnv             string
 	EnableHeartbeat    bool
+	ValuesFile         string
 }
 
 func (i *InstallHelmChart) Run() error {
@@ -121,10 +124,29 @@ func (i *InstallHelmChart) Run() error {
 	client.Wait = true
 	client.WaitForJobs = true
 
-	// install the chart here
-	rel, err := client.RunWithContext(ctx, chart, chart.Values)
-	if err != nil {
-		return fmt.Errorf("failed to install chart: %w", err)
+	if i.ValuesFile != "" {
+		// enable advanced metrics profile
+		options := helmValues.Options{
+			ValueFiles: []string{u.ValuesFile},
+		}
+		provider := getter.All(settings)
+		values, err := options.MergeValues(provider)
+		if err != nil {
+			return fmt.Errorf("failed to merge values: %w", err)
+		}
+		// logs values to be set during upgrade
+		log.Printf("values to be set during upgrade: %v\n", values)
+
+		rel, err := client.Run(u.ReleaseName, chart, values)
+		if err != nil {
+			return fmt.Errorf("failed to upgrade chart: %w", err)
+		}
+	} else {
+		// install the chart here
+		rel, err := client.RunWithContext(ctx, chart, chart.Values)
+		if err != nil {
+			return fmt.Errorf("failed to install chart: %w", err)
+		}
 	}
 
 	log.Printf("installed chart from path: %s in namespace: %s\n", rel.Name, rel.Namespace)

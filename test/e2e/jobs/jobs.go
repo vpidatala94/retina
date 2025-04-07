@@ -94,30 +94,6 @@ func InstallRetina(kubeConfigFilePath, chartPath string, enableHeartBeat bool) *
 	return job
 }
 
-func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
-	job := types.NewJob("Uninstall Retina")
-
-	job.AddStep(&kubernetes.UninstallHelmChart{
-		Namespace:          common.KubeSystemNamespace,
-		ReleaseName:        "retina",
-		KubeConfigFilePath: kubeConfigFilePath,
-	}, nil)
-
-	return job
-}
-
-func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
-	job := types.NewJob("Install EBPF and XDP")
-	job.AddStep(&kubernetes.CreateNamespace{
-		KubeConfigFilePath: kubeConfigFilePath,
-		Namespace:          "install-ebpf-xdp"}, nil)
-
-	job.AddStep(&kubernetes.ApplyYamlConfig{
-		YamlFilePath: "yaml/windows/install-ebpf-xdp.yaml",
-	}, nil)
-	return job
-}
-
 func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, testPodNamespace string) *types.Job {
 	job := types.NewJob("Install and test Retina with basic metrics")
 
@@ -263,14 +239,6 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 		}
 	*/
 
-	// Validate Windows BPF Metrics
-	job.AddStep(&kubernetes.ApplyYamlConfig{
-		YamlFilePath: "yaml/windows/non-hpc-pod.yaml",
-	}, nil)
-	time.Sleep(2 * time.Minute)
-
-	job.AddScenario(windows.ValidateWinBpfMetricScenario())
-
 	/*
 		job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
 
@@ -284,8 +252,6 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 			job.AddScenario(windows.ValidateWindowsBasicMetric())
 
 	*/
-
-	job.AddScenario(windows.ValidateWinBpfMetricScenario())
 	/*
 		job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
 
@@ -334,19 +300,55 @@ func LoadGenericFlags() *types.Job {
 	return job
 }
 
-func LoadAndPinWinBPFJob(kubeConfigFilePath string) *types.Job {
-	job := types.NewJob("Load Windows BPF Maps")
+func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string, valuesFilePath string, rootDir string) *types.Job {
+	job := types.NewJob("Install and test retina win BPF metrics")
+
+	job.AddStep(&kubernetes.CreateNamespace{
+		KubeConfigFilePath: kubeConfigFilePath,
+		Namespace:          "install-ebpf-xdp"}, nil)
+
+	job.AddStep(&kubernetes.ApplyYamlConfig{
+		YamlFilePath: "yaml/windows/install-ebpf-xdp.yaml",
+	}, nil)
+
+	job.AddStep(&generic.Sleep{
+		Duration: 10 * time.Minute,
+	}, nil)
+
 	job.AddStep(&kubernetes.LoadAndPinWinBPF{
 		KubeConfigFilePath:                 kubeConfigFilePath,
 		LoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
 		LoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
 	}, nil)
 
-	return job
-}
+	job.AddStep(&generic.Sleep{
+		Duration: 1 * time.Minute,
+	}, nil)
 
-func UnLoadAndPinWinBPFJob(kubeConfigFilePath string) *types.Job {
-	job := types.NewJob("Unload Windows BPF Maps")
+	job.AddStep(&kubernetes.ApplyYamlConfig{
+		YamlFilePath: "yaml/windows/non-hpc-pod.yaml",
+	}, nil)
+
+	job.AddStep(&generic.Sleep{
+		Duration: 2 * time.Minute,
+	}, nil)
+
+	job.AddStep(&kubernetes.InstallHelmChart{
+		Namespace:          common.KubeSystemNamespace,
+		ReleaseName:        "retina",
+		KubeConfigFilePath: common.KubeConfigFilePath(rootDir),
+		ChartPath:          common.RetinaChartPath(rootDir),
+		TagEnv:             generic.DefaultTagEnv,
+		EnableHeartbeat:    true,
+		ValuesFile:         valuesFilePath,
+	}, nil)
+
+	job.AddStep(&generic.Sleep{
+		Duration: 5 * time.Minute,
+	}, nil)
+
+	job.AddScenario(windows.ValidateWinBpfMetricScenario())
+
 	job.AddStep(&kubernetes.UnLoadAndPinWinBPF{
 		KubeConfigFilePath:                   kubeConfigFilePath,
 		UnLoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",

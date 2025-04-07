@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/microsoft/retina/test/e2e/common"
 	"github.com/microsoft/retina/test/e2e/framework/helpers"
@@ -52,6 +51,7 @@ func TestE2ERetina(t *testing.T) {
 	chartPath := filepath.Join(rootDir, "deploy", "legacy", "manifests", "controller", "helm", "retina")
 	hubblechartPath := filepath.Join(rootDir, "deploy", "hubble", "manifests", "controller", "helm", "retina")
 	profilePath := filepath.Join(rootDir, "test", "profiles", "advanced", "values.yaml")
+	winBpfProfilePath := filepath.Join(rootDir, "test", "profiles", "advanced", "winBpf-values.yaml")
 	kubeConfigFilePath := filepath.Join(rootDir, "test", "e2e", "test.pem")
 
 	// CreateTestInfra
@@ -73,19 +73,8 @@ func TestE2ERetina(t *testing.T) {
 	advanceMetricsE2E.Run(ctx)
 
 	// Install and test Retina with Win BPF metrics
-	// Install Ebpf and XDP
-	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
-	installEbpfAndXDP.Run(ctx)
-
-	time.Sleep(10 * time.Minute)
-
-	// Load BPF Maps
-	loadWinBPFMapsJob := types.NewRunner(t, jobs.LoadWinBPFMapsJob(kubeConfigFilePath))
-	loadWinBPFMapsJob.Run(ctx)
-
-	winBPFMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath, chartPath, common.TestPodNamespace))
-	winBPFMetricsE2E.Run(ctx)
-
+	installAndTestWinBPFMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath, chartPath, profilePath, rootDir))
+	installAndTestWinBPFMetricsE2E.Run(ctx)
 
 	// Install and test Hubble basic metrics
 	validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
