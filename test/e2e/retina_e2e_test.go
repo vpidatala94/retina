@@ -72,7 +72,7 @@ func TestE2ERetina(t *testing.T) {
 	advanceMetricsE2E.Run(ctx)
 
 	// Install and test Retina with Win BPF metrics
-	installAndTestWinBPFMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath, chartPath, rootDir))
+	installAndTestWinBPFMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath, chartPath))
 	installAndTestWinBPFMetricsE2E.Run(ctx)
 
 	// Install and test Hubble basic metrics

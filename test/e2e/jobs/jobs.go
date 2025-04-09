@@ -301,7 +301,7 @@ func LoadGenericFlags() *types.Job {
 	return job
 }
 
-func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string, rootDir string) *types.Job {
+func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string) *types.Job {
 	job := types.NewJob("Install and test retina win BPF metrics")
 
 	job.AddStep(&kubernetes.CreateNamespace{
@@ -337,8 +337,8 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	job.AddStep(&kubernetes.InstallHelmChart{
 		Namespace:          common.KubeSystemNamespace,
 		ReleaseName:        "retina",
-		KubeConfigFilePath: common.KubeConfigFilePath(rootDir),
-		ChartPath:          common.RetinaChartPath(rootDir),
+		KubeConfigFilePath: kubeConfigFilePath,
+		ChartPath:          chartPath,
 		TagEnv:             generic.DefaultTagEnv,
 		EnableHeartbeat:    true,
 		EnableWinBpfPlugin: true,
