@@ -13,8 +13,6 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
-	helmValues "helm.sh/helm/v3/pkg/cli/values"
-	"helm.sh/helm/v3/pkg/getter"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -36,12 +34,17 @@ type InstallHelmChart struct {
 	ChartPath          string
 	TagEnv             string
 	EnableHeartbeat    bool
-	ValuesFile         string
+	EnableWinBpfPlugin bool
+}
+
+func (i *InstallHelmChart) init() {
+	i.EnableWinBpfPlugin = false
 }
 
 func (i *InstallHelmChart) Run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), createTimeout)
 	defer cancel()
+	i.init()
 	settings := cli.New()
 	settings.KubeConfig = i.KubeConfigFilePath
 	actionConfig := new(action.Configuration)
@@ -94,6 +97,22 @@ func (i *InstallHelmChart) Run() error {
 		chart.Values["logLevel"] = "error"
 	}
 
+	if i.EnableWinBpfPlugin {
+		if chart.Values["os"] == nil {
+			chart.Values["os"] = make(map[string]interface{})
+		}
+		osMap := chart.Values["os"].(map[string]interface{})
+		osMap["linux"] = false
+		osMap["windows"] = true
+
+		// Enable pod level metrics and annotations
+		chart.Values["enablePodLevel"] = true
+		chart.Values["enableAnnotations"] = true
+
+		// Set enabled plugins
+		chart.Values["enableplugin"] = []string{"ebpfwindows"}
+	}
+
 	chart.Values["image"].(map[string]interface{})["tag"] = tag
 	chart.Values["image"].(map[string]interface{})["pullPolicy"] = "Always"
 	chart.Values["operator"].(map[string]interface{})["tag"] = tag
@@ -124,29 +143,10 @@ func (i *InstallHelmChart) Run() error {
 	client.Wait = true
 	client.WaitForJobs = true
 
-	if i.ValuesFile != "" {
-		// enable advanced metrics profile
-		options := helmValues.Options{
-			ValueFiles: []string{u.ValuesFile},
-		}
-		provider := getter.All(settings)
-		values, err := options.MergeValues(provider)
-		if err != nil {
-			return fmt.Errorf("failed to merge values: %w", err)
-		}
-		// logs values to be set during upgrade
-		log.Printf("values to be set during upgrade: %v\n", values)
-
-		rel, err := client.Run(u.ReleaseName, chart, values)
-		if err != nil {
-			return fmt.Errorf("failed to upgrade chart: %w", err)
-		}
-	} else {
-		// install the chart here
-		rel, err := client.RunWithContext(ctx, chart, chart.Values)
-		if err != nil {
-			return fmt.Errorf("failed to install chart: %w", err)
-		}
+	// install the chart here
+	rel, err := client.RunWithContext(ctx, chart, chart.Values)
+	if err != nil {
+		return fmt.Errorf("failed to install chart: %w", err)
 	}
 
 	log.Printf("installed chart from path: %s in namespace: %s\n", rel.Name, rel.Namespace)

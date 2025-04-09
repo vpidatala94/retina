@@ -101,26 +101,26 @@ func (p *Plugin) Start(ctx context.Context) error {
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
 	if key.IsDrop() {
 		if key.IsEgress() {
-			metrics.DropBytesGauge.WithLabelValues(DropReason(key.Reason), egressLabel).Set(float64(value.Bytes()))
-			metrics.DropPacketsGauge.WithLabelValues(DropReason(key.Reason), egressLabel).Set(float64(value.Count()))
+			metrics.DropBytesGauge.WithLabelValues(DropReason(key.Reason), egressLabel).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(DropReason(key.Reason), egressLabel).Set(float64(value.Sum()))
 		} else if key.IsIngress() {
-			metrics.DropBytesGauge.WithLabelValues(DropReason(key.Reason), ingressLabel).Set(float64(value.Bytes()))
-			metrics.DropPacketsGauge.WithLabelValues(DropReason(key.Reason), ingressLabel).Set(float64(value.Count()))
+			metrics.DropBytesGauge.WithLabelValues(DropReason(key.Reason), ingressLabel).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(DropReason(key.Reason), ingressLabel).Set(float64(value.Sum()))
 		}
 	} else {
 		if key.IsEgress() {
-			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Bytes()))
-			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Count()))
+			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.BytesSum()))
+			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Sum()))
 		} else if key.IsIngress() {
-			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Count()))
-			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.Bytes()))
+			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Sum()))
+			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.BytesSum()))
 		}
 	}
 }
 
 // eventsMapCallback is the callback function that is called for each value  in the events map.
 func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint32) int {
-	p.l.Debug("EventsMapCallback with Perf")
+	p.l.Debug("EventsMapCallback")
 	p.l.Debug("Size", zap.Uint32("Size", size))
 	err := p.handleTraceEvent(data, size)
 	if err != nil {
@@ -155,7 +155,7 @@ func (p *Plugin) pullMetricsAndEvents(ctx context.Context) {
 		return
 	}
 
-	if enricher.IsInitialized() {
+	if enricher.IsInitialized() && p.cfg.EnablePodLevel == true {
 		p.enricher = enricher.Instance()
 	} else {
 		p.l.Warn("retina enricher is not initialized")
@@ -217,28 +217,6 @@ func (p *Plugin) Generate(context.Context) error {
 	return nil
 }
 
-func formatHexDump(data []byte) string {
-	var sb strings.Builder
-
-	// Limit output to avoid huge logs
-	maxBytes := len(data)
-	if maxBytes > 256 {
-		maxBytes = 256
-		fmt.Fprintf(&sb, "First 256 of %d bytes:\n", len(data))
-	}
-
-	// Print hex values in groups of 16 per line
-	for i := 0; i < maxBytes; i += 16 {
-		// Print only hex values without offset
-		for j := 0; j < 16 && i+j < maxBytes; j++ {
-			fmt.Fprintf(&sb, "%02x ", data[i+j])
-		}
-		sb.WriteString("\n")
-	}
-
-	return sb.String()
-}
-
 func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 	if uintptr(size) < unsafe.Sizeof(uint8(0)) {
 		return fmt.Errorf("invalid size %d", size)
@@ -279,10 +257,6 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 			return fmt.Errorf("could not convert tracenotify event to flow: %w", err)
 		}
 		pktdata := (*TraceNotify)(data).Data
-		hexDump := formatHexDump(pktdata[:])
-		p.l.Debug("Packet data hex dump",
-			zap.String("hexDump", hexDump))
-
 		meta := &utils.RetinaMetadata{}
 		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(TraceNotify{})))
 		fl := e.GetFlow()

@@ -138,7 +138,11 @@ struct trace_notify {
 		};
 		union v6addr	orig_ip6;
 	};
-	uint8_t        data[128];
+};
+
+struct trace_notify_wrapper {
+    struct trace_notify trace;
+    uint8_t		data[128];
 };
 
 struct drop_notify {
@@ -156,7 +160,11 @@ struct drop_notify {
 	uint8_t		file;
 	int8_t		ext_error;
 	uint32_t		ifindex;
-	uint8_t        data[128];
+};
+
+struct drop_notify_wrapper {
+    struct drop_notify	drop;
+    uint8_t		data[128];
 };
 
 struct metrics_key {
