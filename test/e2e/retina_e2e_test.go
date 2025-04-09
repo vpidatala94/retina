@@ -53,6 +53,9 @@ func TestE2ERetina(t *testing.T) {
 	profilePath := filepath.Join(rootDir, "test", "profiles", "advanced", "values.yaml")
 	kubeConfigFilePath := filepath.Join(rootDir, "test", "e2e", "test.pem")
 
+	err = jobs.LoadGenericFlags().Run()
+	require.NoError(t, err, "failed to load generic flags")
+
 	// CreateTestInfra
 	createTestInfra := types.NewRunner(t, jobs.CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath, *common.CreateInfra))
 	createTestInfra.Run(ctx)
