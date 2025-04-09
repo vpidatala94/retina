@@ -76,8 +76,8 @@ func (p *Plugin) Init() error {
 	)
 
 	if err != nil {
-		p.l.Fatal("Failed to create parser", zap.Error(err))
-		return err
+		p.l.Error("Failed to create parser", zap.Error(err))
+		return fmt.Errorf("failed to create parser: %w", err)
 	}
 
 	p.parser = parser
@@ -99,9 +99,6 @@ func (p *Plugin) Start(ctx context.Context) error {
 
 // metricsMapIterateCallback is the callback function that is called for each key-value pair in the metrics map.
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
-	p.l.Debug("MetricsMapIterateCallback")
-	p.l.Debug("Key", zap.String("Key", key.String()))
-	p.l.Debug("Value", zap.String("Value", value.String()))
 	if key.IsDrop() {
 		if key.IsEgress() {
 			metrics.DropBytesGauge.WithLabelValues(DropReason(key.Reason), egressLabel).Set(float64(value.Bytes()))
@@ -113,22 +110,18 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 	} else {
 		if key.IsEgress() {
 			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Bytes()))
-			p.l.Debug("emitting bytes sent count metric", zap.Uint64(bytesSent, value.Bytes()))
 			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Count()))
-			p.l.Debug("emitting packets sent count metric", zap.Uint64(packetsSent, value.Count()))
 		} else if key.IsIngress() {
 			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Count()))
-			p.l.Debug("emitting packets received count metric", zap.Uint64(packetsReceived, value.Count()))
 			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.Bytes()))
-			p.l.Debug("emitting bytes received count metric", zap.Uint64(bytesReceived, value.Bytes()))
 		}
 	}
 }
 
 // eventsMapCallback is the callback function that is called for each value  in the events map.
 func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint32) int {
-	p.l.Info("EventsMapCallback")
-	p.l.Info("Size", zap.Uint32("Size", size))
+	p.l.Debug("EventsMapCallback with Perf")
+	p.l.Debug("Size", zap.Uint32("Size", size))
 	err := p.handleTraceEvent(data, size)
 	if err != nil {
 		p.l.Error("Error handling trace event", zap.Error(err))
@@ -137,7 +130,7 @@ func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint32) int {
 	return 0
 }
 
-func addEbpfToPath() error {
+func (p *Plugin) addEbpfToPath() error {
 	currPath := os.Getenv("PATH")
 	if strings.Contains(currPath, "ebpf-for-windows") {
 		return nil
@@ -146,6 +139,7 @@ func addEbpfToPath() error {
 	ebpfWindowsPath := programFiles + "\\ebpf-for-windows\\"
 	newPath := currPath + ";" + ebpfWindowsPath
 	if err := os.Setenv("PATH", newPath); err != nil {
+		p.l.Error("Error setting PATH environment variable", zap.Error(err))
 		return fmt.Errorf("error setting PATH environment variable: %v", err)
 	}
 
@@ -156,7 +150,7 @@ func (p *Plugin) pullMetricsAndEvents(ctx context.Context) {
 	eventsMap := NewEventsMap()
 	metricsMap := NewMetricsMap()
 
-	err := addEbpfToPath()
+	err := p.addEbpfToPath()
 	if err != nil {
 		return
 	}
@@ -247,45 +241,42 @@ func formatHexDump(data []byte) string {
 
 func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 	if uintptr(size) < unsafe.Sizeof(uint8(0)) {
-		return ErrInvalidEventData
+		return fmt.Errorf("invalid size %d", size)
 	}
-	eventType := *(*uint8)(data)
+
+	perfData := unsafe.Slice((*byte)(data), size)
+	eventType := perfData[0]
 	switch eventType {
 	case NotifyDrop:
-		if uintptr(size) < unsafe.Sizeof(DropNotify{}) {
-			p.l.Error("Invalid DropNotify data size", zap.Uint32("size", size))
-			return ErrInvalidEventData
+		if size < uint32(unsafe.Sizeof(DropNotify{})) {
+			return fmt.Errorf("invalid size for DropNotify %d", size)
 		}
 		e, err := p.parser.Decode(&observer.MonitorEvent{
 			Payload: &observer.PerfEvent{
-				Data: (*[unsafe.Sizeof(DropNotify{})]byte)(data)[:],
+				Data: perfData,
 			},
 		})
 		if err != nil {
-			p.l.Error("Could not convert event to flow", zap.Any("handleTraceEvent", data), zap.Error(err))
-			return ErrInvalidEventData
+			return fmt.Errorf("could not convert event to flow: %w", err)
 		}
-		meta := &utils.RetinaMetadata{}
-		// Add packet size to the flow's metadata.
-		utils.AddPacketSize(meta, 128)
-		fl := e.GetFlow()
-		dropNotify := (*DropNotify)(data)
-		meta.DropReason = utils.DropReason(dropNotify.Subtype)
-		utils.AddRetinaMetadata(fl, meta)
 		p.enricher.Write(e)
+		meta := &utils.RetinaMetadata{}
+		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(DropNotify{})))
+		fl := e.GetFlow()
+		meta.DropReason = utils.DropReason(e.GetFlow().EventType.GetSubType())
+		utils.AddRetinaMetadata(fl, meta)
 	case NotifyTrace:
-		if uintptr(size) < unsafe.Sizeof(TraceNotify{}) {
-			p.l.Error("Invalid TraceNotify data size", zap.Uint32("size", size))
-			return ErrInvalidEventData
+		if size < uint32(unsafe.Sizeof(TraceNotify{})) {
+			return fmt.Errorf("invalid size for TraceNotify %d", size)
 		}
 		e, err := p.parser.Decode(&observer.MonitorEvent{
 			Payload: &observer.PerfEvent{
-				Data: (*[unsafe.Sizeof(TraceNotify{})]byte)(data)[:],
+				Data: perfData,
 			},
 		})
+		p.enricher.Write(e)
 		if err != nil {
-			p.l.Error("Could not convert event to flow", zap.Any("handleTraceEvent", data), zap.Error(err))
-			return ErrInvalidEventData
+			return fmt.Errorf("could not convert tracenotify event to flow: %w", err)
 		}
 		pktdata := (*TraceNotify)(data).Data
 		hexDump := formatHexDump(pktdata[:])
@@ -293,11 +284,9 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 			zap.String("hexDump", hexDump))
 
 		meta := &utils.RetinaMetadata{}
-		// Add packet size to the flow's metadata.
-		utils.AddPacketSize(meta, 128)
+		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(TraceNotify{})))
 		fl := e.GetFlow()
 		utils.AddRetinaMetadata(fl, meta)
-		p.enricher.Write(e)
 	}
 	return nil
 }
