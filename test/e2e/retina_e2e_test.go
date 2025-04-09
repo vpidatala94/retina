@@ -59,7 +59,7 @@ func TestE2ERetina(t *testing.T) {
 
 	t.Cleanup(func() {
 		if *common.DeleteInfra {
-			_ = jobs.DeleteTestInfra(subID, rg, clusterName, location, true).Run()
+			_ = jobs.DeleteTestInfra(subID, rg, location, true).Run()
 		}
 	})
 
