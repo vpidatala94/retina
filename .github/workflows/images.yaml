@@ -15,7 +15,7 @@ jobs:
   e2e:
     name: Run E2E Tests
     runs-on: ubuntu-latest
-    needs: [manifests]
+    #needs: [manifests]
 
     steps:
       - name: Checkout code
