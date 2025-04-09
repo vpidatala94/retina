@@ -256,7 +256,6 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 		if err != nil {
 			return fmt.Errorf("could not convert tracenotify event to flow: %w", err)
 		}
-		pktdata := (*TraceNotify)(data).Data
 		meta := &utils.RetinaMetadata{}
 		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(TraceNotify{})))
 		fl := e.GetFlow()
