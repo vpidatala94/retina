@@ -85,7 +85,7 @@ void create_trace_ntfy_event(struct trace_notify_wrapper* trc_elm_wp)
 	trc_elm_wp->trace.hash       = 0;
     trc_elm_wp->trace.len_orig   = 128;
 	trc_elm_wp->trace.len_cap    = 128;
-    trc_elm_wp->version    = 1;
+    trc_elm_wp->trace.version    = 1;
 	trc_elm_wp->trace.src_label	= 0;
 	trc_elm_wp->trace.dst_label	= 0;
 	trc_elm_wp->trace.dst_id		= 0;
