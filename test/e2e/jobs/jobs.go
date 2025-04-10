@@ -301,7 +301,7 @@ func LoadGenericFlags() *types.Job {
 	return job
 }
 
-func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string) *types.Job {
+func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
 	job := types.NewJob("Install ebpf and xdp")
 	job.AddStep(&kubernetes.CreateNamespace{
 		KubeConfigFilePath: kubeConfigFilePath,
@@ -312,6 +312,11 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	job.AddStep(&generic.Sleep{
 		Duration: 10 * time.Minute,
 	}, nil)
+	return job
+}
+
+func LoadAndPinWinBPF(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Load and pin WinBPF")
 	job.AddStep(&kubernetes.LoadAndPinWinBPF{
 		LoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
 		LoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
@@ -319,8 +324,11 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	job.AddStep(&generic.Sleep{
 		Duration: 1 * time.Minute,
 	}, nil)
+	return job
+}
 
-	job = types.NewJob("Create NON-HPC Windows Pod")
+func CreateWindowsPod(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Create NON-HPC Windows Pod")
 	job.AddStep(&kubernetes.ApplyYamlConfig{
 		KubeConfigFilePath: kubeConfigFilePath,
 		YamlFilePath:       "yaml/windows/non-hpc-pod.yaml",
@@ -328,8 +336,10 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	job.AddStep(&generic.Sleep{
 		Duration: 2 * time.Minute,
 	}, nil)
-
-	job = types.NewJob("Install Retina with WinBPF metrics")
+	return job
+}
+func InstallTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string) *types.Job {
+	job := types.NewJob("Install Retina with WinBPF metrics")
 	job.AddStep(&kubernetes.InstallHelmChart{
 		KubeConfigFilePath: kubeConfigFilePath,
 		Namespace:          common.KubeSystemNamespace,
