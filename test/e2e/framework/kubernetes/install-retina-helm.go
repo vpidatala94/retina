@@ -105,7 +105,8 @@ func (i *InstallHelmChart) Run() error {
 		chart.Values["enableAnnotations"] = true
 
 		// Set enabled plugins
-		chart.Values["enableplugin"] = []string{"ebpfwindows"}
+		chart.Values["enabledPlugin_linux"] = []string{}
+		chart.Values["enabledPlugin_win"] = []string{"ebpfwindows"}
 	}
 
 	chart.Values["image"].(map[string]interface{})["tag"] = tag
