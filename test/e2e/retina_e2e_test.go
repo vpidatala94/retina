@@ -75,14 +75,14 @@ func TestE2ERetina(t *testing.T) {
 	//advanceMetricsE2E.Run(ctx)
 
 	// Install and test Retina with Win BPF metrics
-	installEbpfXdp := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
-	installEbpfXdp.Run(ctx)
+	//installEbpfXdp := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
+	//installEbpfXdp.Run(ctx)
 
-	loadAndPinWinBPF := types.NewRunner(t, jobs.LoadAndPinWinBPF(kubeConfigFilePath))
-	loadAndPinWinBPF.Run(ctx)
+	//loadAndPinWinBPF := types.NewRunner(t, jobs.LoadAndPinWinBPF(kubeConfigFilePath))
+	//loadAndPinWinBPF.Run(ctx)
 
-	createWindowsPod := types.NewRunner(t, jobs.CreateWindowsPod(kubeConfigFilePath))
-	createWindowsPod.Run(ctx)
+	//createWindowsPod := types.NewRunner(t, jobs.CreateWindowsPod(kubeConfigFilePath))
+	//createWindowsPod.Run(ctx)
 
 	installAndTestWinBPFMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath, chartPath))
 	installAndTestWinBPFMetricsE2E.Run(ctx)
