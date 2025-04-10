@@ -251,11 +251,11 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 	job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
 
 	/*
-	job.AddStep(&kubernetes.EnsureStableComponent{
-		PodNamespace:           common.KubeSystemNamespace,
-		LabelSelector:          "k8s-app=retina",
-		IgnoreContainerRestart: false,
-	}, nil)
+		job.AddStep(&kubernetes.EnsureStableComponent{
+			PodNamespace:           common.KubeSystemNamespace,
+			LabelSelector:          "k8s-app=retina",
+			IgnoreContainerRestart: false,
+		}, nil)
 	*/
 	return job
 }
@@ -352,8 +352,8 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	}, nil)
 
 	job.AddScenario(windows.ValidateWinBpfMetricScenario())
+
 	job.AddStep(&kubernetes.UnLoadAndPinWinBPF{
-		KubeConfigFilePath:                   kubeConfigFilePath,
 		UnLoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
 		UnLoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
 	}, nil)
