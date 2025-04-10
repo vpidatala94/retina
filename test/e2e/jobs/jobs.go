@@ -342,24 +342,24 @@ func CreateWindowsPod(kubeConfigFilePath string) *types.Job {
 
 func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string) *types.Job {
 	job := types.NewJob("Install Retina with WinBPF metrics")
-	/*
-		job.AddStep(&kubernetes.InstallHelmChart{
-			KubeConfigFilePath: kubeConfigFilePath,
-			Namespace:          common.KubeSystemNamespace,
-			ReleaseName:        "retina",
-			ChartPath:          chartPath,
-			TagEnv:             generic.DefaultTagEnv,
-			EnableWinBpfPlugin: true,
-		}, nil)
 
-		job.AddStep(&generic.Sleep{
-			Duration: 5 * time.Minute,
-		}, nil)
-	*/
+	job.AddStep(&kubernetes.InstallHelmChart{
+		KubeConfigFilePath: kubeConfigFilePath,
+		Namespace:          common.KubeSystemNamespace,
+		ReleaseName:        "retina",
+		ChartPath:          chartPath,
+		TagEnv:             generic.DefaultTagEnv,
+		EnableWinBpfPlugin: true,
+	}, nil)
+
+	job.AddStep(&generic.Sleep{
+		Duration: 5 * time.Minute,
+	}, nil)
+
 	job.AddScenario(windows.ValidateWinBpfMetricScenario())
 
 	/*
-		job = types.NewJob("Uinstall ebpf and xdp")
+		job = types.NewJob("Uninstall ebpf and xdp")
 		job.AddStep(&kubernetes.UnLoadAndPinWinBPF{
 			KubeConfigFilePath:                   kubeConfigFilePath,
 			UnLoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
