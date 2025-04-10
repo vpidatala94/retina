@@ -202,9 +202,6 @@ func (v *ValidateWinBpfMetric) Run() error {
 		return err
 	}
 
-	//TBR
-	fmt.Println(promOutput)
-
 	postTestFwdCount, err := prom.GetMetricGuageValueFromBuffer([]byte(promOutput), "networkobservability_forward_count", fwd_labels)
 	if err != nil {
 		return err
