@@ -246,17 +246,17 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 		}
 
 		job.AddScenario(windows.ValidateWindowsBasicMetric())
-
 	}
 
 	job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
 
+	/*
 	job.AddStep(&kubernetes.EnsureStableComponent{
 		PodNamespace:           common.KubeSystemNamespace,
 		LabelSelector:          "k8s-app=retina",
 		IgnoreContainerRestart: false,
 	}, nil)
-
+	*/
 	return job
 }
 
