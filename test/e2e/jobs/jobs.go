@@ -348,7 +348,6 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 		ReleaseName:        "retina",
 		ChartPath:          chartPath,
 		TagEnv:             generic.DefaultTagEnv,
-		EnableHeartbeat:    true,
 		EnableWinBpfPlugin: true,
 	}, nil)
 
