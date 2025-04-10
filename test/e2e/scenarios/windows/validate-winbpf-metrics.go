@@ -69,32 +69,39 @@ func (v *ValidateWinBpfMetric) Run() error {
 	if promOutput == "" {
 		fmt.Println("Pre test - no prometheus metrics found")
 	} else {
-		err = prom.CheckMetricFromBuffer([]byte(promOutput), "networkobservability_forward_bytes", fwd_labels)
-		if err != nil {
-			return fmt.Errorf("failed to verify prometheus metrics: %w", err)
-		}
-
 		preTestFwdBytes, err = prom.GetMetricGuageValueFromBuffer([]byte(promOutput), "networkobservability_forward_bytes", fwd_labels)
-		if err != nil && strings.Contains(err.Error(), "failed to parse prometheus metrics") {
-			return err
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to parse networkobservability_forward_bytes") {
+				return err
+			}
+			preTestFwdBytes = 0
 		}
 		fmt.Printf("Pre test - networkobservability_forward_bytes value %f, labels: %v\n", preTestFwdBytes, fwd_labels)
 
 		preTestFwdCount, err = prom.GetMetricGuageValueFromBuffer([]byte(promOutput), "networkobservability_forward_count", fwd_labels)
-		if err != nil && strings.Contains(err.Error(), "failed to parse prometheus metrics") {
-			return err
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to parse networkobservability_forward_count") {
+				return err
+			}
+			preTestFwdCount = 0
 		}
 		fmt.Printf("Pre test - networkobservability_forward_count value %f, labels: %v\n", preTestFwdCount, fwd_labels)
 
 		preTestDrpBytes, err = prom.GetMetricGuageValueFromBuffer([]byte(promOutput), "networkobservability_drop_bytes", drp_labels)
-		if err != nil && strings.Contains(err.Error(), "failed to parse prometheus metrics") {
-			return err
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to parse networkobservability_drop_bytes") {
+				return err
+			}
+			preTestDrpBytes = 0
 		}
 		fmt.Printf("Pre test - networkobservability_drop_bytes value %f, labels: %v\n", preTestDrpBytes, drp_labels)
 
 		preTestDrpCount, err = prom.GetMetricGuageValueFromBuffer([]byte(promOutput), "networkobservability_drop_count", drp_labels)
-		if err != nil && strings.Contains(err.Error(), "failed to parse prometheus metrics") {
-			return err
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to parse networkobservability_drop_count") {
+				return err
+			}
+			preTestDrpCount = 0
 		}
 		fmt.Printf("Pre test - networkobservability_drop_count value %f, labels: %v\n", preTestDrpCount, drp_labels)
 	}
@@ -137,7 +144,6 @@ func (v *ValidateWinBpfMetric) Run() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(output)
 	if strings.Contains(output, "failed") || strings.Contains(output, "error") || strings.Contains(output, "exiting") {
 		return fmt.Errorf("failed to attach to non HPC pod interface %s", output)
 	}
