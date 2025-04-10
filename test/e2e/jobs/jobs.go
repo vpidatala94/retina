@@ -17,6 +17,7 @@ import (
 
 func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string, createInfra bool) *types.Job {
 	job := types.NewJob("Create e2e test infrastructure")
+	createInfra = false
 	if createInfra {
 		job.AddStep(&azure.CreateResourceGroup{
 			SubscriptionID:    subID,
@@ -48,9 +49,9 @@ func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string
 	} else {
 		job.AddStep(&azure.GetAKSKubeConfig{
 			KubeConfigFilePath: kubeConfigFilePath,
-			ClusterName:        "runner-e2e-netobs-1744175546",
+			ClusterName:        "runner-e2e-netobs-1744258605",
 			SubscriptionID:     "15cd5cd8-c222-405e-bb37-c5c6712a075f",
-			ResourceGroupName:  "runner-e2e-netobs-1744175546",
+			ResourceGroupName:  "runner-e2e-netobs-1744258605",
 			Location:           "eastus2",
 		}, nil)
 	}
