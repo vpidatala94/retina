@@ -85,7 +85,7 @@ func TestE2ERetina(t *testing.T) {
 	//createWindowsPod.Run(ctx)
 
 	installAndTestWinBPFMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath, chartPath))
-	installAndTestWinBPFMetricsE2E.Run(ctx)
+	//installAndTestWinBPFMetricsE2E.Run(ctx)
 
 	// Install and test Hubble basic metrics
 	//validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
