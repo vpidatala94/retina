@@ -37,14 +37,9 @@ type InstallHelmChart struct {
 	EnableWinBpfPlugin bool
 }
 
-func (i *InstallHelmChart) init() {
-	i.EnableWinBpfPlugin = false
-}
-
 func (i *InstallHelmChart) Run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), createTimeout)
 	defer cancel()
-	i.init()
 	settings := cli.New()
 	settings.KubeConfig = i.KubeConfigFilePath
 	actionConfig := new(action.Configuration)
