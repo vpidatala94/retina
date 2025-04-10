@@ -318,6 +318,7 @@ func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
 func LoadAndPinWinBPF(kubeConfigFilePath string) *types.Job {
 	job := types.NewJob("Load and pin WinBPF")
 	job.AddStep(&kubernetes.LoadAndPinWinBPF{
+		KubeConfigFilePath:                 kubeConfigFilePath,
 		LoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
 		LoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
 	}, nil)
@@ -338,7 +339,8 @@ func CreateWindowsPod(kubeConfigFilePath string) *types.Job {
 	}, nil)
 	return job
 }
-func InstallTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string) *types.Job {
+
+func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string) *types.Job {
 	job := types.NewJob("Install Retina with WinBPF metrics")
 	job.AddStep(&kubernetes.InstallHelmChart{
 		KubeConfigFilePath: kubeConfigFilePath,
