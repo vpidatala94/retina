@@ -357,14 +357,11 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	}, nil)
 
 	job.AddScenario(windows.ValidateWinBpfMetricScenario())
+	job.AddStep(&kubernetes.UnLoadAndPinWinBPF{
+		KubeConfigFilePath:                   kubeConfigFilePath,
+		UnLoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
+		UnLoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
+	}, nil)
 
-	/*
-		job = types.NewJob("Uninstall ebpf and xdp")
-		job.AddStep(&kubernetes.UnLoadAndPinWinBPF{
-			KubeConfigFilePath:                   kubeConfigFilePath,
-			UnLoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
-			UnLoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
-		}, nil)
-	*/
 	return job
 }
