@@ -305,7 +305,8 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	job := types.NewJob("Install and test retina win BPF metrics")
 
 	job.AddStep(&kubernetes.CreateNamespace{
-		Namespace: "install-ebpf-xdp"}, nil)
+		KubeConfigFilePath: kubeConfigFilePath,
+		Namespace:          "install-ebpf-xdp"}, nil)
 
 	job.AddStep(&kubernetes.ApplyYamlConfig{
 		YamlFilePath: "yaml/windows/install-ebpf-xdp.yaml",
