@@ -17,7 +17,7 @@ import (
 
 func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string, createInfra bool) *types.Job {
 	job := types.NewJob("Create e2e test infrastructure")
-	createInfra = true
+	createInfra = false
 	if createInfra {
 		job.AddStep(&azure.CreateResourceGroup{
 			SubscriptionID:    subID,
@@ -305,8 +305,7 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	job := types.NewJob("Install and test retina win BPF metrics")
 
 	job.AddStep(&kubernetes.CreateNamespace{
-		KubeConfigFilePath: kubeConfigFilePath,
-		Namespace:          "install-ebpf-xdp"}, nil)
+		Namespace: "install-ebpf-xdp"}, nil)
 
 	job.AddStep(&kubernetes.ApplyYamlConfig{
 		YamlFilePath: "yaml/windows/install-ebpf-xdp.yaml",
@@ -317,7 +316,6 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	}, nil)
 
 	job.AddStep(&kubernetes.LoadAndPinWinBPF{
-		KubeConfigFilePath:                 kubeConfigFilePath,
 		LoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
 		LoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
 	}, nil)
@@ -337,7 +335,6 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	job.AddStep(&kubernetes.InstallHelmChart{
 		Namespace:          common.KubeSystemNamespace,
 		ReleaseName:        "retina",
-		KubeConfigFilePath: kubeConfigFilePath,
 		ChartPath:          chartPath,
 		TagEnv:             generic.DefaultTagEnv,
 		EnableHeartbeat:    true,
@@ -351,7 +348,6 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	job.AddScenario(windows.ValidateWinBpfMetricScenario())
 
 	job.AddStep(&kubernetes.UnLoadAndPinWinBPF{
-		KubeConfigFilePath:                   kubeConfigFilePath,
 		UnLoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
 		UnLoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
 	}, nil)
