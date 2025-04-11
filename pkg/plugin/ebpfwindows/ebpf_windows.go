@@ -226,7 +226,7 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 	eventType := perfData[0]
 	switch eventType {
 	case NotifyDrop:
-		if size < uint32(unsafe.Sizeof(DropNotify{})) {
+		if size <= uint32(unsafe.Sizeof(DropNotify{})) {
 			return fmt.Errorf("invalid size for DropNotify %d", size)
 		}
 		e, err := p.parser.Decode(&observer.MonitorEvent{
@@ -244,7 +244,7 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 		meta.DropReason = utils.DropReason(e.GetFlow().EventType.GetSubType())
 		utils.AddRetinaMetadata(fl, meta)
 	case NotifyTrace:
-		if size < uint32(unsafe.Sizeof(TraceNotify{})) {
+		if size <= uint32(unsafe.Sizeof(TraceNotify{})) {
 			return fmt.Errorf("invalid size for TraceNotify %d", size)
 		}
 		e, err := p.parser.Decode(&observer.MonitorEvent{

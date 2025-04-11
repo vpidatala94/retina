@@ -18,7 +18,6 @@ import (
 
 func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string, createInfra bool) *types.Job {
 	job := types.NewJob("Create e2e test infrastructure")
-	createInfra = false
 	if createInfra {
 		job.AddStep(&azure.CreateResourceGroup{
 			SubscriptionID:    subID,
@@ -47,16 +46,7 @@ func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string
 			KubeConfigFilePath: kubeConfigFilePath,
 		}, nil)
 
-	} else {
-		job.AddStep(&azure.GetAKSKubeConfig{
-			KubeConfigFilePath: kubeConfigFilePath,
-			ClusterName:        "runner-e2e-netobs-1744261973",
-			SubscriptionID:     "15cd5cd8-c222-405e-bb37-c5c6712a075f",
-			ResourceGroupName:  "runner-e2e-netobs-1744261973",
-			Location:           "eastus2",
-		}, nil)
 	}
-
 	return job
 }
 
@@ -352,11 +342,5 @@ func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath stri
 	}, nil)
 
 	job.AddScenario(windows.ValidateWinBpfMetricScenario())
-
-	job.AddStep(&kubernetes.UnLoadAndPinWinBPF{
-		UnLoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
-		UnLoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
-	}, nil)
-
 	return job
 }
