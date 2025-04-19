@@ -2,7 +2,6 @@ package ebpfwindows
 
 import (
 	"fmt"
-	"strconv"
 )
 
 // DropMin numbers less than this are non-drop reason codes
@@ -11,19 +10,24 @@ var DropMin uint8 = 130
 // DropInvalid is the Invalid packet reason.
 var DropInvalid uint8 = 2
 
+// Packet Monitor drop reason
+var DropPacketMonitor uint8 = 220
+
 // These values are shared with bpf/lib/common.h and api/v1/flow/flow.proto.
 var dropErrors = map[uint8]string{
-	0:  "Success",
-	2:  "Invalid packet",
-	3:  "Plain Text",
-	4:  "Interface Decrypted",
-	5:  "LB: No backend slot entry found",
-	6:  "LB: No backend entry found",
-	7:  "LB: Reverse entry update failed",
-	8:  "LB: Reverse entry stale",
-	9:  "Fragmented packet",
-	10: "Fragmented packet entry update failed",
-	11: "Missed tail call to custom program",
+	0:   "Success",
+	2:   "Invalid packet",
+	3:   "Plain Text",
+	4:   "Interface Decrypted",
+	5:   "LB: No backend slot entry found",
+	6:   "LB: No backend entry found",
+	7:   "LB: Reverse entry update failed",
+	8:   "LB: Reverse entry stale",
+	9:   "Fragmented packet",
+	10:  "Fragmented packet entry update failed",
+	11:  "Missed tail call to custom program",
+	167: "SNAT map entry not found",
+	220: "PacketMonitor dropped packet",
 }
 
 // Keep in sync with __id_for_file in bpf/lib/source_info.h.
@@ -61,27 +65,25 @@ func BPFFileName(id uint8) string {
 	return fmt.Sprintf("unknown(%d)", id)
 }
 
-func extendedReason(extError int8) string {
-	if extError == 0 {
+func extendedReason(extError int16) string {
+	if extError == int16(0) {
 		return ""
 	}
-	return strconv.Itoa(int(extError))
+	return fmt.Sprintf("%d", extError)
 }
 
-func DropReasonExt(reason uint8, extError int8) string {
-	var ext string
-
+func DropReasonExt(reason uint8, extError int16) string {
 	if err, ok := dropErrors[reason]; ok {
-		if ext = extendedReason(extError); ext == "" {
+		if ext := extendedReason(extError); ext == "" {
 			return err
+		} else {
+			return err + ", " + ext
 		}
-		return err + ", " + ext
 	}
-
 	return fmt.Sprintf("%d, %d", reason, extError)
 }
 
 // DropReason prints the drop reason in a human readable string
 func DropReason(reason uint8) string {
-	return DropReasonExt(reason, int8(0))
+	return DropReasonExt(reason, int16(0))
 }

@@ -137,12 +137,29 @@ func (k *MetricsKey) Direction() string {
 
 // String returns the key in human readable string format
 func (k *MetricsKey) String() string {
-	return fmt.Sprintf("Direction: %s, Reason: %s, File: %s, Line: %d", k.Direction(), DropReason(k.Reason), BPFFileName(k.File), k.Line)
+	return fmt.Sprintf("Direction: %s, Reason: %s, File: %s, Line: %d", k.Direction(), k.DropForwardReason(), BPFFileName(k.File), k.Line)
 }
 
 // DropForwardReason gets the forwarded/dropped reason in human readable string format
 func (k *MetricsKey) DropForwardReason() string {
-	return DropReason(k.Reason)
+	if k.Reason == DropPacketMonitor {
+		return k.DropPacketMonitorReason()
+	} else {
+		return DropReason(k.Reason)
+	}
+}
+
+// DropPacketMonitorReason gets the Packer Monitor dropped reason in human readable string format
+func (k *MetricsKey) DropPacketMonitorReason() string {
+	if k.Reason == DropPacketMonitor {
+		ext_reason_high := k.Reserved[0]
+		ext_reason_low := k.Reserved[1]
+		ext_reason := (uint16(ext_reason_high) << 8) | uint16(ext_reason_low)
+		return DropReasonExt(k.Reason, int16(ext_reason))
+
+	} else {
+		panic("The reason is not DropPacketMonitor")
+	}
 }
 
 // FileName returns the filename where the event occurred, in string format.
