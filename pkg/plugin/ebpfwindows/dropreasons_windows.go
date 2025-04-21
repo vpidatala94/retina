@@ -30,6 +30,11 @@ var dropErrors = map[uint8]string{
 	220: "PacketMonitor dropped packet",
 }
 
+var dropExtendedErrors = map[int16]string{
+	903: "Protocol unreachable",
+	904: "Port unreachable",
+}
+
 // Keep in sync with __id_for_file in bpf/lib/source_info.h.
 var files = map[uint8]string{
 
@@ -69,6 +74,11 @@ func extendedReason(extError int16) string {
 	if extError == int16(0) {
 		return ""
 	}
+
+	if err, ok := dropExtendedErrors[extError]; ok {
+		return err
+	}
+
 	return fmt.Sprintf("%d", extError)
 }
 
