@@ -224,6 +224,7 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 
 	perfData := unsafe.Slice((*byte)(data), size)
 	eventType := perfData[0]
+	p.l.Debug("handleTraceEvent- EventType", zap.Uint8("eventType", eventType))
 	switch eventType {
 	case NotifyDrop:
 		if size <= uint32(unsafe.Sizeof(DropNotify{})) {
