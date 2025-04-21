@@ -25,13 +25,6 @@ import (
 const (
 	// name of the ebpfwindows plugin
 	name string = "ebpfwindows"
-	// name of the metrics
-	packetsReceived        string = "win_packets_recv_count"
-	packetsSent            string = "win_packets_sent_count"
-	bytesSent              string = "win_bytes_sent_count"
-	bytesReceived          string = "win_bytes_recv_count"
-	droppedPacketsIncoming string = "win_packets_recv_drop_count"
-	droppedPacketsOutgoing string = "win_packets_sent_drop_count"
 	// metrics direction
 	ingressLabel = "ingress"
 	egressLabel  = "egress"
@@ -101,11 +94,11 @@ func (p *Plugin) Start(ctx context.Context) error {
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
 	if key.IsDrop() {
 		if key.IsEgress() {
-			metrics.DropBytesGauge.WithLabelValues(DropReason(key.Reason), egressLabel).Set(float64(value.BytesSum()))
-			metrics.DropPacketsGauge.WithLabelValues(DropReason(key.Reason), egressLabel).Set(float64(value.Sum()))
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.Sum()))
 		} else if key.IsIngress() {
-			metrics.DropBytesGauge.WithLabelValues(DropReason(key.Reason), ingressLabel).Set(float64(value.BytesSum()))
-			metrics.DropPacketsGauge.WithLabelValues(DropReason(key.Reason), ingressLabel).Set(float64(value.Sum()))
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.Sum()))
 		}
 	} else {
 		if key.IsEgress() {

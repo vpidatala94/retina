@@ -1,7 +1,6 @@
 package ebpfwindows
 
 import (
-	"fmt"
 	"reflect"
 	"syscall"
 	"unsafe"
@@ -130,14 +129,26 @@ func MetricDirection(dir uint8) string {
 	return direction[dirUnknown]
 }
 
-// Direction gets the direction in human readable string format
-func (k *MetricsKey) Direction() string {
-	return MetricDirection(k.Dir)
+// DropPacketMonitorReason gets the Packer Monitor dropped reason in human readable string format
+func (k *MetricsKey) DropPacketMonitorReason() string {
+	if k.Reason == DropPacketMonitor {
+		ext_reason_high := k.Reserved[0]
+		ext_reason_low := k.Reserved[1]
+		ext_reason := (uint16(ext_reason_high) << 8) | uint16(ext_reason_low)
+		return DropReasonExt(k.Reason, int16(ext_reason))
+
+	} else {
+		panic("The reason is not DropPacketMonitor")
+	}
 }
 
-// String returns the key in human readable string format
-func (k *MetricsKey) String() string {
-	return fmt.Sprintf("Direction: %s, Reason: %s, File: %s, Line: %d", k.Direction(), DropReason(k.Reason), BPFFileName(k.File), k.Line)
+// Direction gets the direction in human readable string format
+func (k *MetricsKey) Direction() string {
+	if k.Reason == DropPacketMonitor {
+		return k.DropPacketMonitorReason()
+	} else {
+		return DropReason(k.Reason)
+	}
 }
 
 // DropForwardReason gets the forwarded/dropped reason in human readable string format
@@ -183,8 +194,4 @@ func (vs MetricsValues) BytesSum() uint64 {
 	}
 
 	return b
-}
-
-func (vs MetricsValues) String() string {
-	return fmt.Sprintf("Sum: %d, BytesSum: %d", vs.Sum(), vs.BytesSum())
 }
