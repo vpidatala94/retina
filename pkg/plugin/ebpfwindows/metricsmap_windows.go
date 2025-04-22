@@ -154,8 +154,8 @@ func (k *MetricsKey) DropPacketMonitorReason() string {
 	if k.Reason == DropPacketMonitor {
 		ext_reason_high := k.Reserved[0]
 		ext_reason_low := k.Reserved[1]
-		ext_reason := (uint16(ext_reason_high) << 8) | uint16(ext_reason_low)
-		return DropReasonExt(k.Reason, int16(ext_reason))
+		ext_reason := (uint32(ext_reason_high) << 8) | uint32(ext_reason_low)
+		return DropReasonExt(k.Reason, ext_reason)
 
 	} else {
 		panic("The reason is not DropPacketMonitor")
