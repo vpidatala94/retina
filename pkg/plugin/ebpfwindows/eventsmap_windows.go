@@ -57,7 +57,7 @@ func (e *eventsMap) RegisterForCallback(cb eventsMapCallback) error {
 	)
 
 	if ret != 0 {
-		fmt.Println("Error registering for events map callback", err)
+		fmt.Println("Error registering for events map callback")
 		return err
 	}
 
