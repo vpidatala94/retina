@@ -23,7 +23,7 @@ FROM --platform=$TARGETPLATFORM mcr.microsoft.com/windows/servercore@sha256:4595
 
 FROM golang AS eBPFRetinaStage
 WORKDIR /tmp
-RUN curl -L -o retinaebpfapi.dll https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/pkg/plugin/ebpfwindows/retinaebpfapi.dll
+RUN curl -L -o retinaebpfapi.dll https://raw.githubusercontent.com/vpidatala94/retina/user/vpidatala/POC/8/windows/retinaebpfapi.dll
 FROM golang AS intermediate
 ARG APP_INSIGHTS_ID # set to enable AI telemetry
 ARG GOARCH=amd64 # default to amd64
