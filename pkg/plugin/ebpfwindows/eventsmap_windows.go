@@ -3,6 +3,8 @@ package ebpfwindows
 import (
 	"syscall"
 	"unsafe"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -55,6 +57,7 @@ func (e *eventsMap) RegisterForCallback(cb eventsMapCallback) error {
 	)
 
 	if ret != 0 {
+		l.info("Error registering for events map callback", zap.Error(err))
 		return err
 	}
 
