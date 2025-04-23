@@ -1,10 +1,9 @@
 package ebpfwindows
 
 import (
+	"fmt"
 	"syscall"
 	"unsafe"
-	"fmt"
-	"go.uber.org/zap"
 )
 
 var (
