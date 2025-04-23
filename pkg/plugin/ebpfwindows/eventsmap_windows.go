@@ -3,7 +3,7 @@ package ebpfwindows
 import (
 	"syscall"
 	"unsafe"
-
+	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -47,6 +47,7 @@ func (e *eventsMap) RegisterForCallback(cb eventsMapCallback) error {
 
 	eventsCallback = cb
 
+	fmt.Println("Attempting to register")
 	// Convert the Go function into a syscall-compatible function
 	callback := syscall.NewCallback(eventsMapSysCallCallback)
 
@@ -57,7 +58,7 @@ func (e *eventsMap) RegisterForCallback(cb eventsMapCallback) error {
 	)
 
 	if ret != 0 {
-		l.info("Error registering for events map callback", zap.Error(err))
+		fmt.Println("Error registering for events map callback", err)
 		return err
 	}
 
