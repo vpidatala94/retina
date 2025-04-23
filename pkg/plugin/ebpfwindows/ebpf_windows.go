@@ -31,8 +31,7 @@ const (
 )
 
 var (
-	ErrInvalidEventData = errors.New("The Event Data is invalid")
-	ErrNilEnricher      = errors.New("enricher is nil")
+	ErrNilEnricher = errors.New("enricher is nil")
 )
 
 // Plugin is the ebpfwindows plugin
@@ -102,8 +101,8 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 		}
 	} else {
 		if key.IsEgress() {
+			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel).Set(float64(value.Sum()))
 			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.BytesSum()))
-			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Sum()))
 		} else if key.IsIngress() {
 			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Sum()))
 			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.BytesSum()))
