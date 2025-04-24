@@ -27,6 +27,7 @@ var dropErrors = map[uint8]string{
 	10:  "Fragmented packet entry update failed",
 	11:  "Missed tail call to custom program",
 	167: "SNAT map entry not found",
+	181: "DropReason_PolicyDeny",
 	220: "PacketMonitor dropped packet",
 }
 
