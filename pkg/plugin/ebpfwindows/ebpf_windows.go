@@ -92,6 +92,7 @@ func (p *Plugin) Start(ctx context.Context) error {
 // metricsMapIterateCallback is the callback function that is called for each key-value pair in the metrics map.
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
 	if key.IsDrop() {
+		p.l.Debug("MetricsMapIterateCallback", zap.String("key", key.String()))
 		if key.IsEgress() {
 			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.BytesSum()))
 			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.Sum()))
@@ -100,6 +101,7 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.Sum()))
 		}
 	} else {
+		p.l.Debug("MetricsMapIterateCallback", zap.String("key", key.String()))
 		if key.IsEgress() {
 			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel).Set(float64(value.Sum()))
 			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.BytesSum()))

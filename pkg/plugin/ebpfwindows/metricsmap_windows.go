@@ -156,6 +156,10 @@ func (k *MetricsKey) DropForwardReason() string {
 	return DropReason(k.Reason)
 }
 
+func (k *MetricsKey) String() string {
+	return "Reason: " + k.Direction() + ", Dir: " + MetricDirection(k.Dir)
+}
+
 // FileName returns the filename where the event occurred, in string format.
 func (k *MetricsKey) FileName() string {
 	return BPFFileName(k.File)
