@@ -40,6 +40,41 @@ func InitializeMetrics() {
 		utils.ForwardBytesGaugeName,
 		forwardBytesGaugeDescription,
 		utils.Direction)
+
+	CiliumDropPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.DroppedPacketsGaugeName,
+		dropPacketsGaugeDescription,
+		utils.Reason,
+		utils.Direction,
+		utils.Line,
+		utils.File)
+
+	CiliumDropBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.DropBytesGaugeName,
+		dropBytesGaugeDescription,
+		utils.Reason,
+		utils.Direction,
+		utils.Line,
+		utils.File)
+
+	CiliumForwardPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.ForwardPacketsGaugeName,
+		forwardPacketsGaugeDescription,
+		utils.Direction,
+		utils.Line,
+		utils.File)
+
+	CiliumForwardBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.ForwardBytesGaugeName,
+		forwardBytesGaugeDescription,
+		utils.Direction,
+		utils.Line,
+		utils.File)
+
 	HNSStatsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		hnsStats,

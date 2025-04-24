@@ -15,7 +15,7 @@ import (
 	kcfg "github.com/microsoft/retina/pkg/config"
 	"github.com/microsoft/retina/pkg/enricher"
 	"github.com/microsoft/retina/pkg/log"
-	"github.com/microsoft/retina/pkg/metrics"
+	metrics "github.com/microsoft/retina/pkg/metrics"
 	"github.com/microsoft/retina/pkg/plugin/registry"
 	"github.com/microsoft/retina/pkg/utils"
 	"github.com/sirupsen/logrus"
@@ -94,20 +94,20 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 	if key.IsDrop() {
 		p.l.Debug("MetricsMapIterateCallback Drop", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.CiliumDropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
+			metrics.CiliumDropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
 		} else if key.IsIngress() {
-			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.CiliumDropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
+			metrics.CiliumDropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
 		}
 	} else {
 		p.l.Debug("MetricsMapIterateCallback Forward", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.ForwardBytesGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.CiliumForwardPacketsGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
+			metrics.CiliumForwardBytesGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
 		} else if key.IsIngress() {
-			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.CiliumForwardPacketsGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
+			metrics.CiliumForwardBytesGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
 		}
 	}
 }

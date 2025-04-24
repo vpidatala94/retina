@@ -51,10 +51,14 @@ var (
 	isInitialized bool
 
 	// Common gauges across os distributions
-	DropPacketsGauge    GaugeVec
-	DropBytesGauge      GaugeVec
-	ForwardPacketsGauge GaugeVec
-	ForwardBytesGauge   GaugeVec
+	DropPacketsGauge          GaugeVec
+	DropBytesGauge            GaugeVec
+	ForwardPacketsGauge       GaugeVec
+	ForwardBytesGauge         GaugeVec
+	CiliumDropPacketsGauge    GaugeVec
+	CiliumDropBytesGauge      GaugeVec
+	CiliumForwardPacketsGauge GaugeVec
+	CiliumForwardBytesGauge   GaugeVec
 
 	// Windows
 	HNSStatsGauge GaugeVec
