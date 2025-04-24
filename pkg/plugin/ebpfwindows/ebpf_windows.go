@@ -31,7 +31,15 @@ const (
 )
 
 var (
-	ErrNilEnricher = errors.New("enricher is nil")
+	ErrNilEnricher       = errors.New("enricher is nil")
+	ingressfwdbytectr    = float64(0)
+	egressfwdbytectr     = float64(0)
+	ingressfwdpacketctr  = float64(0)
+	egressfwdpacketctr   = float64(0)
+	ingressdropbytectr   = float64(0)
+	egressdropbytectr    = float64(0)
+	ingressdroppacketctr = float64(0)
+	egressdroppacketctr  = float64(0)
 )
 
 // Plugin is the ebpfwindows plugin
@@ -94,22 +102,29 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 	if key.IsDrop() {
 		p.l.Debug("MetricsMapIterateCallback Drop", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.BytesSum()))
-			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.Sum()))
+			egressdroppacketctr += float64(value.Sum())
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(egressdroppacketctr)
+			egressdropbytectr += float64(value.BytesSum())
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(egressdropbytectr)
 		} else if key.IsIngress() {
-			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.BytesSum()))
-			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.Sum()))
+			ingressdroppacketctr += float64(value.Sum())
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(ingressdroppacketctr)
+			ingressdropbytectr += float64(value.BytesSum())
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(ingressdropbytectr)
 		}
 	} else {
 		p.l.Debug("MetricsMapIterateCallback Forward", zap.String("key", key.String()))
 		if key.IsEgress() {
-			p.l.Debug("Inside Egress", zap.String("key", key.String()), zap.Int("valueSum", int(value.Sum())), zap.Int("valueBytes", int(value.BytesSum())))
-			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel).Set(float64(value.Sum()))
-			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.BytesSum()))
+			egressfwdpacketctr += float64(value.Sum())
+			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel).Set(egressfwdpacketctr)
+			egressfwdbytectr += float64(value.BytesSum())
+			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(egressfwdbytectr)
 		} else if key.IsIngress() {
-			p.l.Debug("Inside Ingress", zap.String("key", key.String()), zap.Int("valueSum", int(value.Sum())), zap.Int("valueBytes", int(value.BytesSum())))
-			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Sum()))
-			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.BytesSum()))
+			p.l.Debug("Inside Egress", zap.String("key", key.String()), zap.Int("valueSum", int(value.Sum())), zap.Int("valueBytes", int(value.BytesSum())))
+			ingressfwdpacketctr += float64(value.Sum())
+			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(ingressfwdpacketctr)
+			ingressfwdbytectr += float64(value.BytesSum())
+			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(ingressfwdbytectr)
 		}
 	}
 }
