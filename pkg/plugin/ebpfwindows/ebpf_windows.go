@@ -84,6 +84,7 @@ func (p *Plugin) Name() string {
 // Start the plugin by starting a periodic timer.
 func (p *Plugin) Start(ctx context.Context) error {
 	p.l.Info("Start ebpfWindows plugin...")
+	metrics.OverrideMetricsRegistry()
 	p.pullMetricsAndEvents(ctx)
 	p.l.Info("Complete ebpfWindows plugin...")
 	return nil
@@ -94,20 +95,20 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 	if key.IsDrop() {
 		p.l.Debug("MetricsMapIterateCallback Drop", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.CiliumDropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.CiliumDropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
 		} else if key.IsIngress() {
-			metrics.CiliumDropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.CiliumDropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
 		}
 	} else {
 		p.l.Debug("MetricsMapIterateCallback Forward", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.CiliumForwardPacketsGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.CiliumForwardBytesGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
+			metrics.ForwardBytesGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
 		} else if key.IsIngress() {
-			metrics.CiliumForwardPacketsGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.CiliumForwardBytesGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
+			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
 		}
 	}
 }
