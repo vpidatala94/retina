@@ -1,6 +1,7 @@
 package ebpfwindows
 
 import (
+	"fmt"
 	"reflect"
 	"syscall"
 	"unsafe"
@@ -147,8 +148,12 @@ func (k *MetricsKey) DropForwardReason() string {
 	return DropReason(k.Reason)
 }
 
+func (k *MetricsKey) lineVal() string {
+	return fmt.Sprintf("%d", k.Line)
+}
+
 func (k *MetricsKey) String() string {
-	return "Reason: " + k.DropForwardReason() + ", Dir: " + MetricDirection(k.Dir)
+	return "Reason: " + k.DropForwardReason() + ", Dir: " + MetricDirection(k.Dir) + ", Line: " + k.lineVal() + ", File: " + k.FileName()
 }
 
 // FileName returns the filename where the event occurred, in string format.
