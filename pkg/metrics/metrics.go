@@ -18,28 +18,40 @@ func InitializeMetrics() {
 		metricsLogger.Warn("Metrics already initialized. Exiting.")
 		return
 	}
+
 	DropPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.DroppedPacketsGaugeName,
 		dropPacketsGaugeDescription,
 		utils.Reason,
-		utils.Direction)
+		utils.Direction,
+		utils.Line,
+		utils.File)
+
 	DropBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.DropBytesGaugeName,
 		dropBytesGaugeDescription,
 		utils.Reason,
-		utils.Direction)
+		utils.Direction,
+		utils.Line,
+		utils.File)
+
 	ForwardPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.ForwardPacketsGaugeName,
 		forwardPacketsGaugeDescription,
-		utils.Direction)
+		utils.Direction,
+		utils.Line,
+		utils.File)
+
 	ForwardBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.ForwardBytesGaugeName,
 		forwardBytesGaugeDescription,
-		utils.Direction)
+		utils.Direction,
+		utils.Line,
+		utils.File)
 
 	HNSStatsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
@@ -175,37 +187,4 @@ func GetCounterValue(m prometheus.Counter) float64 {
 }
 
 func OverrideMetricsRegistry() {
-	DropPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
-		exporter.DefaultRegistry,
-		utils.DroppedPacketsGaugeName,
-		dropPacketsGaugeDescription,
-		utils.Reason,
-		utils.Direction,
-		utils.Line,
-		utils.File)
-
-	DropBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
-		exporter.DefaultRegistry,
-		utils.DropBytesGaugeName,
-		dropBytesGaugeDescription,
-		utils.Reason,
-		utils.Direction,
-		utils.Line,
-		utils.File)
-
-	ForwardPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
-		exporter.DefaultRegistry,
-		utils.ForwardPacketsGaugeName,
-		forwardPacketsGaugeDescription,
-		utils.Direction,
-		utils.Line,
-		utils.File)
-
-	ForwardBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
-		exporter.DefaultRegistry,
-		utils.ForwardBytesGaugeName,
-		forwardBytesGaugeDescription,
-		utils.Direction,
-		utils.Line,
-		utils.File)
 }
