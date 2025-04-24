@@ -142,22 +142,13 @@ func (k *MetricsKey) DropPacketMonitorReason() string {
 	}
 }
 
-// Direction gets the direction in human readable string format
-func (k *MetricsKey) Direction() string {
-	if k.Reason == DropPacketMonitor {
-		return k.DropPacketMonitorReason()
-	} else {
-		return DropReason(k.Reason)
-	}
-}
-
 // DropForwardReason gets the forwarded/dropped reason in human readable string format
 func (k *MetricsKey) DropForwardReason() string {
 	return DropReason(k.Reason)
 }
 
 func (k *MetricsKey) String() string {
-	return "Reason: " + k.Direction() + ", Dir: " + MetricDirection(k.Dir)
+	return "Reason: " + k.DropForwardReason() + ", Dir: " + MetricDirection(k.Dir)
 }
 
 // FileName returns the filename where the event occurred, in string format.

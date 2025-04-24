@@ -92,7 +92,7 @@ func (p *Plugin) Start(ctx context.Context) error {
 // metricsMapIterateCallback is the callback function that is called for each key-value pair in the metrics map.
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
 	if key.IsDrop() {
-		p.l.Debug("MetricsMapIterateCallback", zap.String("key", key.String()))
+		p.l.Debug("MetricsMapIterateCallback Drop", zap.String("key", key.String()))
 		if key.IsEgress() {
 			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.BytesSum()))
 			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.Sum()))
@@ -101,11 +101,13 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.Sum()))
 		}
 	} else {
-		p.l.Debug("MetricsMapIterateCallback", zap.String("key", key.String()))
+		p.l.Debug("MetricsMapIterateCallback Forward", zap.String("key", key.String()))
 		if key.IsEgress() {
+			p.l.Debug("Inside Egress", zap.String("key", key.String()), zap.Int("valueSum", int(value.Sum())), zap.Int("valueBytes", int(value.BytesSum())))
 			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel).Set(float64(value.Sum()))
 			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.BytesSum()))
 		} else if key.IsIngress() {
+			p.l.Debug("Inside Ingress", zap.String("key", key.String()), zap.Int("valueSum", int(value.Sum())), zap.Int("valueBytes", int(value.BytesSum())))
 			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Sum()))
 			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.BytesSum()))
 		}
