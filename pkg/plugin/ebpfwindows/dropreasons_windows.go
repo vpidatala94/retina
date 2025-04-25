@@ -154,10 +154,9 @@ func extendedReason(extError uint32) string {
 }
 
 func DropReasonExt(reason uint8, extError uint32) string {
-	var ext string
-
 	if err, ok := dropErrors[reason]; ok {
-		if ext := extendedReason(extError); ext == "" {
+		ext := extendedReason(extError)
+		if ext == "" {
 			return err
 		}
 		return err + ", " + ext
