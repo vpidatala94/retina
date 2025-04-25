@@ -71,19 +71,19 @@ func BPFFileName(id uint8) string {
 	return fmt.Sprintf("unknown(%d)", id)
 }
 
-func extendedReason(extError int16) string {
-	if extError == int16(0) {
+func extendedReason(extError uint32) string {
+	if extError == uint32(0) {
 		return ""
 	}
 
 	return fmt.Sprintf("%d", extError)
 }
 
-func DropReasonExt(reason uint8, extError int16) string {
+func DropReasonExt(reason uint8, extError uint32) string {
 	var ext string
 
 	if err, ok := dropErrors[reason]; ok {
-		if ext := extendedReason(int16(extError)); ext == "" {
+		if ext := extendedReason(extError); ext == "" {
 			return err
 		}
 		return err + ", " + ext
@@ -94,5 +94,5 @@ func DropReasonExt(reason uint8, extError int16) string {
 
 // DropReason prints the drop reason in a human readable string
 func DropReason(reason uint8) string {
-	return DropReasonExt(reason, int16(0))
+	return DropReasonExt(reason, uint32(0))
 }

@@ -135,8 +135,8 @@ func (k *MetricsKey) DropPacketMonitorReason() string {
 	if k.Reason == DropPacketMonitor {
 		ext_reason_high := k.Reserved[0]
 		ext_reason_low := k.Reserved[1]
-		ext_reason := (uint16(ext_reason_high) << 8) | uint16(ext_reason_low)
-		return DropReasonExt(k.Reason, int16(ext_reason))
+		ext_reason := (uint32(ext_reason_high) << 8) | uint32(ext_reason_low)
+		return DropReasonExt(k.Reason, ext_reason)
 
 	} else {
 		panic("The reason is not DropPacketMonitor")
@@ -145,7 +145,11 @@ func (k *MetricsKey) DropPacketMonitorReason() string {
 
 // DropForwardReason gets the forwarded/dropped reason in human readable string format
 func (k *MetricsKey) DropForwardReason() string {
-	return DropReason(k.Reason)
+	if k.Reason == DropPacketMonitor {
+		return k.DropPacketMonitorReason()
+	} else {
+		return DropReason(k.Reason)
+	}
 }
 
 func (k *MetricsKey) lineVal() string {
