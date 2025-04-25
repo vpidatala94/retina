@@ -102,8 +102,9 @@ var dropErrors = map[uint8]string{
 }
 
 var dropExtendedErrors = map[uint32]string{
-	903: "Protocol unreachable",
-	904: "Port unreachable",
+	903:  "Protocol unreachable",
+	904:  "Port unreachable",
+	1204: "Endpoint not found",
 }
 
 // Keep in sync with __id_for_file in bpf/lib/source_info.h.
