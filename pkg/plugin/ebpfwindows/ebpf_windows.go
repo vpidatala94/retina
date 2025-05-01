@@ -114,15 +114,12 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 }
 
 // eventsMapCallback is the callback function that is called for each value  in the events map.
-func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint32) int {
-	p.l.Debug("EventsMapCallback")
-	p.l.Debug("Size", zap.Uint32("Size", size))
+func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint32) {
+	p.l.Debug("eventsMapCallback", zap.Uint32("size", size))
 	err := p.handleTraceEvent(data, size)
 	if err != nil {
 		p.l.Error("Error handling trace event", zap.Error(err))
-		return -1
 	}
-	return 0
 }
 
 func (p *Plugin) addEbpfToPath() error {
@@ -150,7 +147,7 @@ func (p *Plugin) pullMetricsAndEvents(ctx context.Context) {
 		return
 	}
 
-	if enricher.IsInitialized() && p.cfg.EnablePodLevel == true {
+	if enricher.IsInitialized() && p.cfg.EnablePodLevel {
 		p.enricher = enricher.Instance()
 	} else {
 		p.l.Warn("retina enricher is not initialized")
@@ -219,7 +216,6 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 
 	perfData := unsafe.Slice((*byte)(data), size)
 	eventType := perfData[0]
-	p.l.Debug("handleTraceEvent- EventType", zap.Uint8("eventType", eventType))
 	switch eventType {
 	case NotifyDrop:
 		if size <= uint32(unsafe.Sizeof(DropNotify{})) {
