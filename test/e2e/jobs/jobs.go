@@ -50,7 +50,7 @@ func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string
 			KubeConfigFilePath: kubeConfigFilePath,
 			ClusterName:        "runner-e2e-netobs-1746176142",
 			SubscriptionID:     subID,
-			ResourceGroupName:  rg,
+			ResourceGroupName:  "runner-e2e-netobs-1746176142",
 			Location:           location,
 		}, nil)
 	}
