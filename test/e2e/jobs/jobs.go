@@ -45,6 +45,14 @@ func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string
 		job.AddStep(&azure.GetAKSKubeConfig{
 			KubeConfigFilePath: kubeConfigFilePath,
 		}, nil)
+	} else {
+		job.AddStep(&azure.GetAKSKubeConfig{
+			KubeConfigFilePath: kubeConfigFilePath,
+			ClusterName:        "runner-e2e-netobs-1746176142",
+			SubscriptionID:     subID,
+			ResourceGroupName:  rg,
+			Location:           location,
+		}, nil)
 	}
 	return job
 }

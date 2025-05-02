@@ -57,8 +57,8 @@ func TestE2ERetina(t *testing.T) {
 	require.NoError(t, err, "failed to load generic flags")
 
 	//// CreateTestInfra
-	//createTestInfra := types.NewRunner(t, jobs.CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath, false))
-	//createTestInfra.Run(ctx)
+	createTestInfra := types.NewRunner(t, jobs.CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath, false))
+	createTestInfra.Run(ctx)
 
 	t.Cleanup(func() {
 		if *common.DeleteInfra {
