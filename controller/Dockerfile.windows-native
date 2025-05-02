@@ -24,12 +24,12 @@ RUN go build -v -o captureworkload.exe -ldflags="-X github.com/microsoft/retina/
 FROM --platform=windows/amd64 ${BUILDER_IMAGE} as pktmon-builder
 WORKDIR C:\\retina
 
-FROM golang AS eBPFRetinaStage
-WORKDIR /tmp
-RUN tdnf install -y unzip && \
-    curl -L -o eBPFRetina.zip https://www.nuget.org/api/v2/package/Microsoft.Wcn.Observability.eBPF.Retina.x64/0.1.0-prerelease.3 && \
-    unzip -d eBPFRetina eBPFRetina.zip && \
-    if [ ! -d "eBPFRetina" ]; then echo "eBPFRetina directory not found after unzip!" && exit 1; fi
+FROM ltsc2022 AS eBPFRetinaStage
+WORKDIR C:\tmp
+RUN powershell -Command `
+    Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Wcn.Observability.eBPF.Retina.x64/0.1.0-prerelease.3" -OutFile "eBPFRetina.zip"; `
+    Expand-Archive -Path "eBPFRetina.zip" -DestinationPath "eBPFRetina"; `
+    if (!(Test-Path "eBPFRetina")) { throw "eBPFRetina directory not found after unzip!" }
 
 FROM --platform=windows/amd64 mcr.microsoft.com/windows/nanoserver:ltsc2022 AS final
 ADD https://github.com/microsoft/etl2pcapng/releases/download/v1.10.0/etl2pcapng.exe /etl2pcapng.exe
