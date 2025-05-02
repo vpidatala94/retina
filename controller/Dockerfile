@@ -19,11 +19,10 @@ FROM --platform=$TARGETPLATFORM mcr.microsoft.com/windows/servercore@sha256:4595
 
 # build stages
 
-# intermediate go generate stage
-FROM ltsc2022 AS eBPFRetinaStage
+FROM mcr.microsoft.com/windows/servercore:ltsc2022 AS ebpfretinastage
 WORKDIR C:\tmp
-RUN powershell -Command `
-    Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Wcn.Observability.eBPF.Retina.x64/0.1.0-prerelease.3" -OutFile "eBPFRetina.zip"; `
+SHELL ["powershell", "-Command"]
+RUN Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Wcn.Observability.eBPF.Retina.x64/0.1.0-prerelease.3" -OutFile "eBPFRetina.zip"; `
     Expand-Archive -Path "eBPFRetina.zip" -DestinationPath "eBPFRetina"; `
     if (!(Test-Path "eBPFRetina")) { throw "eBPFRetina directory not found after unzip!" }
 
