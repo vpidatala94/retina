@@ -17,10 +17,13 @@ type eventsMapCallback func(data unsafe.Pointer, size uint32)
 var eventsCallback eventsMapCallback
 
 // This function will be passed to the Windows API
-func eventsMapSysCallCallback(data unsafe.Pointer, size uint32) {
+func eventsMapSysCallCallback(data unsafe.Pointer, size uint32) int {
+
 	if eventsCallback != nil {
-		eventsCallback(data, size)
+		uintptr(eventsCallback(data, size))
 	}
+
+	return 0
 }
 
 // EventsMap interface represents a events map
