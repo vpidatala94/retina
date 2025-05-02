@@ -18,11 +18,12 @@ FROM --platform=$TARGETPLATFORM mcr.microsoft.com/windows/servercore@sha256:6fdf
 FROM --platform=$TARGETPLATFORM mcr.microsoft.com/windows/servercore@sha256:45952938708fbde6ec0b5b94de68bcdec3f8c838be018536b1e9e5bd95e6b943 AS ltsc2022
 
 # build stages
-FROM mcr.microsoft.com/windows/servercore:ltsc2022 AS ebpfretinastage
-WORKDIR C:\tmp
-SHELL ["powershell", "-Command"]
-RUN Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Wcn.Observability.eBPF.Retina.x64/0.1.0-prerelease.3" -OutFile "eBPFRetina.zip" ; Expand-Archive -Path "eBPFRetina.zip" -DestinationPath "eBPFRetina" ; if (!(Test-Path "eBPFRetina")) { throw 'eBPFRetina directory not found after unzip!' }
-
+FROM golang AS eBPFRetinaStage
+WORKDIR /tmp
+RUN tdnf install -y unzip && \
+    curl -L -o eBPFRetina.zip https://www.nuget.org/api/v2/package/Microsoft.Wcn.Observability.eBPF.Retina.x64/0.1.0-prerelease.3 && \
+    unzip -d eBPFRetina eBPFRetina.zip  && \
+    if [ ! -d "eBPFRetina" ]; then echo "eBPFRetina directory not found after unzip!" && exit 1; fi
 
 FROM golang AS intermediate
 ARG APP_INSIGHTS_ID # set to enable AI telemetry
