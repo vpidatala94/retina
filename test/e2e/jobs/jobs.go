@@ -45,7 +45,6 @@ func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string
 		job.AddStep(&azure.GetAKSKubeConfig{
 			KubeConfigFilePath: kubeConfigFilePath,
 		}, nil)
-
 	}
 	return job
 }
