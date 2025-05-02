@@ -286,3 +286,12 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION }}
+
+      - name: Run E2E Tests
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -v ./test/e2e/. -timeout 60m -tags=e2e -count=1  -args -image-tag=$(make version) -image-registry=${{ vars.ACR_NAME }}  -image-namespace=${{ github.repository}}
