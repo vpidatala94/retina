@@ -130,17 +130,14 @@ func MetricDirection(dir uint8) string {
 	return direction[dirUnknown]
 }
 
-// DropPacketMonitorReason gets the Packer Monitor dropped reason in human readable string format
-func (k *MetricsKey) DropPacketMonitorReason() string {
-	if k.Reason == DropPacketMonitor {
-		ext_reason_high := k.Reserved[0]
-		ext_reason_low := k.Reserved[1]
-		ext_reason := (uint32(ext_reason_high) << 8) | uint32(ext_reason_low)
-		return DropReasonExt(k.Reason, ext_reason)
+// Direction gets the direction in human readable string format
+func (k *MetricsKey) Direction() string {
+	return MetricDirection(k.Dir)
+}
 
-	} else {
-		panic("The reason is not DropPacketMonitor")
-	}
+// String returns the key in human readable string format
+func (k *MetricsKey) String() string {
+	return fmt.Sprintf("Direction: %s, Reason: %s, File: %s, Line: %d", k.Direction(), k.DropForwardReason(), BPFFileName(k.File), k.Line)
 }
 
 // DropForwardReason gets the forwarded/dropped reason in human readable string format
@@ -152,12 +149,17 @@ func (k *MetricsKey) DropForwardReason() string {
 	}
 }
 
-func (k *MetricsKey) lineVal() string {
-	return fmt.Sprintf("%d", k.Line)
-}
+// DropPacketMonitorReason gets the Packer Monitor dropped reason in human readable string format
+func (k *MetricsKey) DropPacketMonitorReason() string {
+	if k.Reason == DropPacketMonitor {
+		ext_reason_high := k.Reserved[0]
+		ext_reason_low := k.Reserved[1]
+		ext_reason := (uint32(ext_reason_high) << 8) | uint32(ext_reason_low)
+		return DropReasonExt(k.Reason, ext_reason)
 
-func (k *MetricsKey) String() string {
-	return "Reason: " + k.DropForwardReason() + ", Dir: " + MetricDirection(k.Dir) + ", Line: " + k.lineVal() + ", File: " + k.FileName()
+	} else {
+		panic("The reason is not DropPacketMonitor")
+	}
 }
 
 // FileName returns the filename where the event occurred, in string format.
@@ -198,4 +200,8 @@ func (vs MetricsValues) BytesSum() uint64 {
 	}
 
 	return b
+}
+
+func (vs MetricsValues) String() string {
+	return fmt.Sprintf("Sum: %d, BytesSum: %d", vs.Sum(), vs.BytesSum())
 }

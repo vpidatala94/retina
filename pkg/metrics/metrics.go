@@ -24,34 +24,26 @@ func InitializeMetrics() {
 		utils.DroppedPacketsGaugeName,
 		dropPacketsGaugeDescription,
 		utils.Reason,
-		utils.Direction,
-		utils.Line,
-		utils.File)
+		utils.Direction)
 
 	DropBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.DropBytesGaugeName,
 		dropBytesGaugeDescription,
 		utils.Reason,
-		utils.Direction,
-		utils.Line,
-		utils.File)
+		utils.Direction)
 
 	ForwardPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.ForwardPacketsGaugeName,
 		forwardPacketsGaugeDescription,
-		utils.Direction,
-		utils.Line,
-		utils.File)
+		utils.Direction)
 
 	ForwardBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.ForwardBytesGaugeName,
 		forwardBytesGaugeDescription,
-		utils.Direction,
-		utils.Line,
-		utils.File)
+		utils.Direction)
 
 	HNSStatsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,

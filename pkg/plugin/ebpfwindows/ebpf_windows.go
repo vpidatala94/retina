@@ -95,20 +95,20 @@ func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues
 	if key.IsDrop() {
 		p.l.Debug("MetricsMapIterateCallback Drop", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.Sum()))
 		} else if key.IsIngress() {
-			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.Sum()))
 		}
 	} else {
 		p.l.Debug("MetricsMapIterateCallback Forward", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.ForwardBytesGauge.WithLabelValues(egressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel).Set(float64(value.Sum()))
+			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.BytesSum()))
 		} else if key.IsIngress() {
-			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.Sum()))
-			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel, key.lineVal(), key.FileName()).Set(float64(value.BytesSum()))
+			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Sum()))
+			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.BytesSum()))
 		}
 	}
 }

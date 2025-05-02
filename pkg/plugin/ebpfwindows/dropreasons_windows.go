@@ -2,6 +2,8 @@ package ebpfwindows
 
 import (
 	"fmt"
+
+	metrics "github.com/microsoft/retina/pkg/metrics"
 )
 
 // DropMin numbers less than this are non-drop reason codes
@@ -22,7 +24,7 @@ var dropErrors = map[uint8]string{
 	5:   "Reason_LbNoBackendSlot",
 	6:   "Reason_LbNoBackend",
 	7:   "Reason_LbReverseNatUpdate",
-	8:   "Reason_LbReverseNatStale",
+	8:   "Resaon_LbReverseNatStale",
 	9:   "Reason_FragmentedPacket",
 	10:  "Reason_FragmentedPacketUpdated",
 	11:  "Reason_MissedCustomCall",
@@ -101,12 +103,6 @@ var dropErrors = map[uint8]string{
 	220: "DropReason_PacketMonitor",
 }
 
-var dropExtendedErrors = map[uint32]string{
-	903:  "Protocol unreachable",
-	904:  "Port unreachable",
-	1204: "Endpoint not found",
-}
-
 // Keep in sync with __id_for_file in bpf/lib/source_info.h.
 var files = map[uint8]string{
 
@@ -143,26 +139,23 @@ func BPFFileName(id uint8) string {
 }
 
 func extendedReason(extError uint32) string {
-	if extError == uint32(0) {
+	if extError == 0 {
 		return ""
 	}
 
-	if err, ok := dropExtendedErrors[extError]; ok {
-		return err
-	}
-
-	return fmt.Sprintf("Unknown (%d)", extError)
+	// Check if the extended error is a known drop reason
+	dropReason := metrics.GetDropReason(extError)
+	return dropReason.String()
 }
 
 func DropReasonExt(reason uint8, extError uint32) string {
 	if err, ok := dropErrors[reason]; ok {
-		ext := extendedReason(extError)
-		if ext == "" {
+		if ext := extendedReason(extError); ext == "" {
 			return err
+		} else {
+			return err + ", " + ext
 		}
-		return err + ", " + ext
 	}
-
 	return fmt.Sprintf("%d, %d", reason, extError)
 }
 
