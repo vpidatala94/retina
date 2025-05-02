@@ -20,7 +20,7 @@ var eventsCallback eventsMapCallback
 func eventsMapSysCallCallback(data unsafe.Pointer, size uint32) int {
 
 	if eventsCallback != nil {
-		uintptr(eventsCallback(data, size))
+		eventsCallback(data, size)
 	}
 
 	return 0
