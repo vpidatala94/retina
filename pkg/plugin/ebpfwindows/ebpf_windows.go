@@ -12,6 +12,8 @@ import (
 	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
 	observer "github.com/cilium/cilium/pkg/hubble/observer/types"
 	hp "github.com/cilium/cilium/pkg/hubble/parser"
+	monitor "github.com/cilium/cilium/pkg/monitor"
+	monitorapi "github.com/cilium/cilium/pkg/monitor/api"
 	kcfg "github.com/microsoft/retina/pkg/config"
 	"github.com/microsoft/retina/pkg/enricher"
 	"github.com/microsoft/retina/pkg/log"
@@ -217,8 +219,8 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 	perfData := unsafe.Slice((*byte)(data), size)
 	eventType := perfData[0]
 	switch eventType {
-	case NotifyDrop:
-		if size <= uint32(unsafe.Sizeof(DropNotify{})) {
+	case monitorapi.MessageTypeDrop:
+		if size <= uint32(unsafe.Sizeof(monitor.DropNotify{})) {
 			return fmt.Errorf("invalid size for DropNotify %d", size)
 		}
 		e, err := p.parser.Decode(&observer.MonitorEvent{
@@ -231,12 +233,12 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 		}
 		p.enricher.Write(e)
 		meta := &utils.RetinaMetadata{}
-		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(DropNotify{})))
+		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(monitor.DropNotify{})))
 		fl := e.GetFlow()
 		meta.DropReason = utils.DropReason(e.GetFlow().EventType.GetSubType())
 		utils.AddRetinaMetadata(fl, meta)
-	case NotifyTrace:
-		if size <= uint32(unsafe.Sizeof(TraceNotify{})) {
+	case monitorapi.MessageTypeTrace:
+		if size <= uint32(unsafe.Sizeof(monitor.TraceNotify{})) {
 			return fmt.Errorf("invalid size for TraceNotify %d", size)
 		}
 		e, err := p.parser.Decode(&observer.MonitorEvent{
@@ -249,7 +251,7 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 			return fmt.Errorf("could not convert tracenotify event to flow: %w", err)
 		}
 		meta := &utils.RetinaMetadata{}
-		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(TraceNotify{})))
+		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(monitor.TraceNotify{})))
 		fl := e.GetFlow()
 		utils.AddRetinaMetadata(fl, meta)
 	}
