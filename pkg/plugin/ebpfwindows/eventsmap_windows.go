@@ -1,9 +1,10 @@
 package ebpfwindows
 
 import (
-	"fmt"
 	"syscall"
 	"unsafe"
+
+	"github.com/microsoft/retina/pkg/log"
 )
 
 var (
@@ -28,7 +29,7 @@ func eventsMapSysCallCallback(data unsafe.Pointer, size uint32) int {
 
 // EventsMap interface represents a events map
 type EventsMap interface {
-	RegisterForCallback(eventsMapCallback) error
+	RegisterForCallback(*log.ZapLogger, eventsMapCallback) error
 	UnregisterForCallback() error
 }
 
@@ -42,22 +43,23 @@ func NewEventsMap() EventsMap {
 }
 
 // RegisterForCallback registers a callback function to be called when a new event is added to the events map
-func (e *eventsMap) RegisterForCallback(cb eventsMapCallback) error {
+var callRegisterEventsMapCallback = func(callback, perfBuffer uintptr) (uintptr, uintptr, error) {
+	return registerEventsMapCallback.Call(callback, perfBuffer)
+}
+
+func (e *eventsMap) RegisterForCallback(l *log.ZapLogger, cb eventsMapCallback) error {
 
 	eventsCallback = cb
 
-	fmt.Println("Attempting to register")
+	l.Info("Attempting to register")
 	// Convert the Go function into a syscall-compatible function
 	callback := syscall.NewCallback(eventsMapSysCallCallback)
 
 	// Call the API
-	ret, _, err := registerEventsMapCallback.Call(
-		uintptr(callback),
-		uintptr(unsafe.Pointer(&e.perfBuffer)),
-	)
+	ret, _, err := callRegisterEventsMapCallback(uintptr(callback), e.perfBuffer)
 
 	if ret != 0 {
-		fmt.Println("Error registering for events map callback")
+		l.Error("Error registering for events map callback")
 		return err
 	}
 
@@ -65,10 +67,14 @@ func (e *eventsMap) RegisterForCallback(cb eventsMapCallback) error {
 }
 
 // UnregisterForCallback unregisters the callback function
+var callUnregisterEventsMapCallback = func(perfBuffer uintptr) (uintptr, uintptr, error) {
+	return unregisterEventsMapCallback.Call(perfBuffer)
+}
+
 func (e *eventsMap) UnregisterForCallback() error {
 
 	// Call the API
-	ret, _, err := unregisterEventsMapCallback.Call(e.perfBuffer)
+	ret, _, err := callUnregisterEventsMapCallback(e.perfBuffer)
 
 	if ret != 0 {
 		return err
