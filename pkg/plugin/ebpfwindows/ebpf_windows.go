@@ -40,7 +40,7 @@ var (
 type Plugin struct {
 	l               *log.ZapLogger
 	cfg             *kcfg.Config
-	enricher        *enricher.Enricher
+	enricher        enricher.EnricherInterface
 	externalChannel chan *v1.Event
 	parser          *hp.Parser
 }
@@ -95,6 +95,14 @@ func (p *Plugin) Start(ctx context.Context) error {
 
 // metricsMapIterateCallback is the callback function that is called for each key-value pair in the metrics map.
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
+	if key == nil {
+		p.l.Error("MetricsMapIterateCallback key is nil")
+		return
+	}
+	if value == nil {
+		p.l.Error("MetricsMapIterateCallback value is nil")
+		return
+	}
 	if key.IsDrop() {
 		p.l.Debug("MetricsMapIterateCallback Drop", zap.String("key", key.String()))
 		if key.IsEgress() {
@@ -173,7 +181,7 @@ func (p *Plugin) pullMetricsAndEvents(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			err := metricsMap.IterateWithCallback(p.metricsMapIterateCallback)
+			err := metricsMap.IterateWithCallback(p.l, p.metricsMapIterateCallback)
 			if err != nil {
 				p.l.Error("Error iterating metrics map", zap.Error(err))
 			}
@@ -216,6 +224,9 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 		return fmt.Errorf("invalid size %d", size)
 	}
 
+	if data == nil {
+		return fmt.Errorf("handleTraceEvent data received is nil")
+	}
 	perfData := unsafe.Slice((*byte)(data), size)
 	eventType := perfData[0]
 	switch eventType {
