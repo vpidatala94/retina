@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -21,6 +20,7 @@ import (
 	metrics "github.com/microsoft/retina/pkg/metrics"
 	"github.com/microsoft/retina/pkg/plugin/registry"
 	"github.com/microsoft/retina/pkg/utils"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +40,7 @@ var (
 type Plugin struct {
 	l               *log.ZapLogger
 	cfg             *kcfg.Config
-	enricher        *enricher.Enricher
+	enricher        enricher.EnricherInterface
 	externalChannel chan *v1.Event
 	parser          *hp.Parser
 }
@@ -58,9 +58,7 @@ func New(cfg *kcfg.Config) registry.Plugin {
 
 // Init is a no-op for the ebpfwindows plugin
 func (p *Plugin) Init() error {
-	logger := slog.Default().With("windowsEbpf", "parser")
-	parser, err := hp.New(logger,
-		// We use noop getters here since we will use our own custom parser in hubble
+	parser, err := hp.New(logrus.WithField("windowsEbpf", "parser"),
 		&NoopEndpointGetter,
 		&NoopIdentityGetter,
 		&NoopDNSGetter,
@@ -68,7 +66,6 @@ func (p *Plugin) Init() error {
 		&NoopServiceGetter,
 		&NoopLinkGetter,
 		&NoopPodMetadataGetter,
-		false,
 	)
 
 	if err != nil {
@@ -95,6 +92,14 @@ func (p *Plugin) Start(ctx context.Context) error {
 
 // metricsMapIterateCallback is the callback function that is called for each key-value pair in the metrics map.
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
+	if key == nil {
+		p.l.Error("MetricsMapIterateCallback key is nil")
+		return
+	}
+	if value == nil {
+		p.l.Error("MetricsMapIterateCallback value is nil")
+		return
+	}
 	if key.IsDrop() {
 		p.l.Debug("MetricsMapIterateCallback Drop", zap.String("key", key.String()))
 		if key.IsEgress() {
@@ -216,6 +221,9 @@ func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 		return fmt.Errorf("invalid size %d", size)
 	}
 
+	if data == nil {
+		return fmt.Errorf("handleTraceEvent data received is nil")
+	}
 	perfData := unsafe.Slice((*byte)(data), size)
 	eventType := perfData[0]
 	switch eventType {
