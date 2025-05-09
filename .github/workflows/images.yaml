@@ -288,35 +288,3 @@ jobs:
         run: |
           set -euo pipefail
           go test -v ./test/e2e/. -timeout 60m -tags=e2e -count=1  -args -image-tag=$(make version) -image-registry=${{ vars.ACR_NAME }}  -image-namespace=${{ github.repository}}
-
-  perf-test-basic:
-    if: ${{ github.event_name == 'merge_group' && success('manifests')}}
-    needs: [manifests]
-    uses: ./.github/workflows/perf-template.yaml
-    with:
-      image-registry: ${{ vars.ACR_NAME }}
-      tag: $(make version)
-      image-namespace: ${{ github.repository }}
-      retina-mode: basic
-      azure-location: ${{ vars.AZURE_LOCATION }}
-    secrets:
-      azure-subscription: ${{ secrets.AZURE_SUBSCRIPTION }}
-      azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      azure-app-insights-key: ${{ secrets.AZURE_APP_INSIGHTS_KEY }}
-
-  perf-test-advanced:
-    if: ${{ github.event_name == 'merge_group' && success('manifests')}}
-    needs: [manifests]
-    uses: ./.github/workflows/perf-template.yaml
-    with:
-      image-registry: ${{ vars.ACR_NAME }}
-      tag: $(make version)
-      image-namespace: ${{ github.repository }}
-      retina-mode: advanced
-      azure-location: ${{ vars.AZURE_LOCATION }}
-    secrets:
-      azure-subscription: ${{ secrets.AZURE_SUBSCRIPTION }}
-      azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      azure-app-insights-key: ${{ secrets.AZURE_APP_INSIGHTS_KEY }}
