@@ -58,7 +58,7 @@ func New(cfg *kcfg.Config) registry.Plugin {
 // Init is a no-op for the ebpfwindows plugin
 func (p *Plugin) Init() error {
 	parser, err := hp.New(
-		log.Logger().Named("ebpfwindows"),
+		slog.Logger(),
 		&NoopEndpointGetter,
 		&NoopIdentityGetter,
 		&NoopDNSGetter,
@@ -66,6 +66,8 @@ func (p *Plugin) Init() error {
 		&NoopServiceGetter,
 		&NoopLinkGetter,
 		&NoopPodMetadataGetter,
+		false,
+		&options.Options{},
 	)
 
 	if err != nil {
