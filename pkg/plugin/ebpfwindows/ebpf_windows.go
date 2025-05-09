@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -58,7 +59,7 @@ func New(cfg *kcfg.Config) registry.Plugin {
 // Init is a no-op for the ebpfwindows plugin
 func (p *Plugin) Init() error {
 	parser, err := hp.New(
-		slog.Logger(),
+		slog.Default(),
 		&NoopEndpointGetter,
 		&NoopIdentityGetter,
 		&NoopDNSGetter,
@@ -67,7 +68,6 @@ func (p *Plugin) Init() error {
 		&NoopLinkGetter,
 		&NoopPodMetadataGetter,
 		false,
-		&options.Options{},
 	)
 
 	if err != nil {
