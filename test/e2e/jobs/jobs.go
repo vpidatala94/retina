@@ -18,34 +18,42 @@ import (
 
 func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string, createInfra bool) *types.Job {
 	job := types.NewJob("Create e2e test infrastructure")
+	if createInfra {
+		job.AddStep(&azure.CreateResourceGroup{
+			SubscriptionID:    subID,
+			ResourceGroupName: rg,
+			Location:          location,
+		}, nil)
 
-	job.AddStep(&azure.CreateResourceGroup{
-		SubscriptionID:    subID,
-		ResourceGroupName: rg,
-		Location:          location,
-	}, nil)
+		job.AddStep(&azure.CreateVNet{
+			VnetName:         "testvnet",
+			VnetAddressSpace: "10.0.0.0/9",
+		}, nil)
 
-	job.AddStep(&azure.CreateVNet{
-		VnetName:         "testvnet",
-		VnetAddressSpace: "10.0.0.0/9",
-	}, nil)
+		job.AddStep(&azure.CreateSubnet{
+			SubnetName:         "testsubnet",
+			SubnetAddressSpace: "10.0.0.0/12",
+		}, nil)
 
-	job.AddStep(&azure.CreateSubnet{
-		SubnetName:         "testsubnet",
-		SubnetAddressSpace: "10.0.0.0/12",
-	}, nil)
+		job.AddStep(&azure.CreateNPMCluster{
+			ClusterName:  clusterName,
+			PodCidr:      "10.128.0.0/9",
+			DNSServiceIP: "192.168.0.10",
+			ServiceCidr:  "192.168.0.0/28",
+		}, nil)
 
-	job.AddStep(&azure.CreateNPMCluster{
-		ClusterName:  clusterName,
-		PodCidr:      "10.128.0.0/9",
-		DNSServiceIP: "192.168.0.10",
-		ServiceCidr:  "192.168.0.0/28",
-	}, nil)
-
-	job.AddStep(&azure.GetAKSKubeConfig{
-		KubeConfigFilePath: kubeConfigFilePath,
-	}, nil)
-
+		job.AddStep(&azure.GetAKSKubeConfig{
+			KubeConfigFilePath: kubeConfigFilePath,
+		}, nil)
+	} else {
+		job.AddStep(&azure.GetAKSKubeConfig{
+			KubeConfigFilePath: kubeConfigFilePath,
+			ClusterName:        "runner-e2e-netobs-1746822808",
+			SubscriptionID:     subID,
+			ResourceGroupName:  "runner-e2e-netobs-1746822808",
+			Location:           location,
+		}, nil)
+	}
 	return job
 }
 
