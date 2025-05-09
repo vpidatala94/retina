@@ -1,11 +1,14 @@
-# mcr.microsoft.com/oss/go/microsoft/golang:1.23.5-cbl-mariner2.0
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang@sha256:ef39e430a97a61bec3395adb673a7c5611d2212f14abe40da21cbfd11a9d6e9d AS builder
+# skopeo inspect docker://mcr.microsoft.com/oss/go/microsoft/golang:1.24.2-2-cbl-mariner2.0 --format "{{.Name}}@{{.Digest}}"
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/oss/go/microsoft/golang@sha256:5341a0010ecff114ee2f11f5eaa4f73b721b54142954041523f3e785d5c4b978 AS builder
 
 ARG VERSION
 ARG APP_INSIGHTS_ID
 
 WORKDIR /workspace
 COPY . .
+
+# Install jq, not sure why this went missing in the 1.24.1-2-cbl-mariner2.0 base go image.
+RUN tdnf install -y jq
 
 # Default linux/architecture.
 ARG GOOS=linux
@@ -16,7 +19,7 @@ ENV GOARCH=${GOARCH}
 
 RUN make manifests
 RUN --mount=type=cache,target="/root/.cache/go-build" \
-	GOOS=linux GOARCH=amd64 go build \
+	GOOS=$GOOS GOARCH=$GOARCH go build \
 	-ldflags "-X github.com/microsoft/retina/internal/buildinfo.Version="$VERSION" \
 	-X "github.com/microsoft/retina/internal/buildinfo.ApplicationInsightsID"="$APP_INSIGHTS_ID"" \
 	-a -o retina-operator operator/main.go
