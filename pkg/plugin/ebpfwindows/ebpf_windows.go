@@ -20,7 +20,6 @@ import (
 	metrics "github.com/microsoft/retina/pkg/metrics"
 	"github.com/microsoft/retina/pkg/plugin/registry"
 	"github.com/microsoft/retina/pkg/utils"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 )
 
@@ -58,7 +57,8 @@ func New(cfg *kcfg.Config) registry.Plugin {
 
 // Init is a no-op for the ebpfwindows plugin
 func (p *Plugin) Init() error {
-	parser, err := hp.New(logrus.WithField("windowsEbpf", "parser"),
+	parser, err := hp.New(
+		log.Logger().Named("ebpfwindows"),
 		&NoopEndpointGetter,
 		&NoopIdentityGetter,
 		&NoopDNSGetter,
