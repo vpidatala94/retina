@@ -69,11 +69,7 @@ ARG GOOS=linux # default to linux
 ARG VERSION
 ENV GOARCH=${GOARCH}
 ENV GOOS=${GOOS}
-<<<<<<< HEAD
-RUN --mount=type=cache,target="/root/.cache/go-build" go build -v -o /go/bin/retina/controller -ldflags "-X github.com/microsoft/retina/internal/buildinfo.Version="$VERSION" -X github.com/microsoft/retina/internal/buildinfo.ApplicationInsightsID="$APP_INSIGHTS_ID"" controller/main.go
-=======
 RUN --mount=type=cache,target="/root/.cache/go-build" go build -x -v -o /go/bin/retina/controller -ldflags "-X github.com/microsoft/retina/internal/buildinfo.Version="$VERSION" -X github.com/microsoft/retina/internal/buildinfo.ApplicationInsightsID="$APP_INSIGHTS_ID"" controller/main.go
->>>>>>> upstream/main
 
 
 # init binary
@@ -107,11 +103,7 @@ RUN arr="clang tcpdump ip ss iptables-legacy iptables-legacy-save iptables-nft i
 ARG GOARCH=amd64
 ENV HUBBLE_ARCH=${GOARCH}
 # ARG HUBBLE_VERSION may be modified via the update-hubble GitHub Action
-<<<<<<< HEAD
-ARG HUBBLE_VERSION=v1.17.1
-=======
 ARG HUBBLE_VERSION=v1.17.3
->>>>>>> upstream/main
 ENV HUBBLE_VERSION=${HUBBLE_VERSION}
 RUN echo "Hubble version: $HUBBLE_VERSION" && \
     wget --no-check-certificate https://github.com/cilium/hubble/releases/download/$HUBBLE_VERSION/hubble-linux-${HUBBLE_ARCH}.tar.gz && \
