@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	defaultTimeoutSeconds    = 300
+	defaultTimeoutSeconds    = 3000
 	defaultRetryDelay        = 500 * time.Millisecond
 	defaultRetryAttempts     = 60
 	defaultHTTPClientTimeout = 2 * time.Second

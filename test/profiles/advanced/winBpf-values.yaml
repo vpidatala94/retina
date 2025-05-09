@@ -1,0 +1,9 @@
+os:
+  linux: false
+  windows: true
+enablePodLevel: true
+enableAnnotations: true
+operator:
+  enabled: true
+  enableRetinaEndpoint: true
+enableplugin: ["ebpfwindows"]

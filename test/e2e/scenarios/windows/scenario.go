@@ -15,6 +15,23 @@ func ValidateWinBpfMetricScenario() *types.Scenario {
 				RetinaDaemonSetName:       "retina-agent-win",
 				EbpfXdpDeamonSetNamespace: "install-ebpf-xdp",
 				EbpfXdpDeamonSetName:      "install-ebpf-xdp",
+				NonHpcAppNamespace:        "default",
+				NonHpcAppName:             "non-hpc",
+				NonHpcPodName:             "non-hpc-pod",
+			},
+		},
+	}
+	return types.NewScenario(name, steps...)
+}
+
+func ValidateWindowsBasicMetric() *types.Scenario {
+	name := "Windows Metrics"
+	steps := []*types.StepWrapper{
+		{
+			Step: &ValidateHNSMetric{
+				KubeConfigFilePath:       "./test.pem",
+				RetinaDaemonSetNamespace: common.KubeSystemNamespace,
+				RetinaDaemonSetName:      "retina-agent-win",
 			},
 		},
 	}

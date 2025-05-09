@@ -4,53 +4,43 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
+	"strings"
 	"time"
-
-	//"fmt"
 	"unsafe"
 
 	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
 	observer "github.com/cilium/cilium/pkg/hubble/observer/types"
 	hp "github.com/cilium/cilium/pkg/hubble/parser"
+	monitor "github.com/cilium/cilium/pkg/monitor"
+	monitorapi "github.com/cilium/cilium/pkg/monitor/api"
 	kcfg "github.com/microsoft/retina/pkg/config"
-
-	//"github.com/google/uuid"
 	"github.com/microsoft/retina/pkg/enricher"
 	"github.com/microsoft/retina/pkg/log"
-	"github.com/microsoft/retina/pkg/metrics"
+	metrics "github.com/microsoft/retina/pkg/metrics"
 	"github.com/microsoft/retina/pkg/plugin/registry"
-
-	//"github.com/microsoft/retina/pkg/utils"
-	"github.com/sirupsen/logrus"
+	"github.com/microsoft/retina/pkg/utils"
 	"go.uber.org/zap"
 )
 
 const (
 	// name of the ebpfwindows plugin
 	name string = "ebpfwindows"
-	// name of the metrics
-	packetsReceived        string = "win_packets_recv_count"
-	packetsSent            string = "win_packets_sent_count"
-	bytesSent              string = "win_bytes_sent_count"
-	bytesReceived          string = "win_bytes_recv_count"
-	droppedPacketsIncoming string = "win_packets_recv_drop_count"
-	droppedPacketsOutgoing string = "win_packets_sent_drop_count"
 	// metrics direction
 	ingressLabel = "ingress"
 	egressLabel  = "egress"
 )
 
 var (
-	ErrInvalidEventData = errors.New("The Cilium Event Data is invalid")
-	ErrNilEnricher      = errors.New("enricher is nil")
+	ErrNilEnricher = errors.New("enricher is nil")
 )
 
 // Plugin is the ebpfwindows plugin
 type Plugin struct {
 	l               *log.ZapLogger
 	cfg             *kcfg.Config
-	enricher        *enricher.Enricher
+	enricher        enricher.EnricherInterface
 	externalChannel chan *v1.Event
 	parser          *hp.Parser
 }
@@ -68,19 +58,23 @@ func New(cfg *kcfg.Config) registry.Plugin {
 
 // Init is a no-op for the ebpfwindows plugin
 func (p *Plugin) Init() error {
-	parser, err := hp.New(logrus.WithField("cilium", "parser"),
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
+	parser, err := hp.New(
+		slog.Default(),
+		&NoopEndpointGetter,
+		&NoopIdentityGetter,
+		&NoopDNSGetter,
+		&NoopIPGetter,
+		&NoopServiceGetter,
+		&NoopLinkGetter,
+		&NoopPodMetadataGetter,
+		false,
 	)
+
 	if err != nil {
-		p.l.Fatal("Failed to create parser", zap.Error(err))
-		return err
+		p.l.Error("Failed to create parser", zap.Error(err))
+		return fmt.Errorf("failed to create parser: %w", err)
 	}
+
 	p.parser = parser
 	return nil
 }
@@ -93,66 +87,83 @@ func (p *Plugin) Name() string {
 // Start the plugin by starting a periodic timer.
 func (p *Plugin) Start(ctx context.Context) error {
 	p.l.Info("Start ebpfWindows plugin...")
-	if enricher.IsInitialized() {
-		p.enricher = enricher.Instance()
-	} else {
-		p.l.Warn("retina enricher is not initialized")
-	}
-	p.pullCiliumMetricsAndEvents(ctx)
+	p.pullMetricsAndEvents(ctx)
 	p.l.Info("Complete ebpfWindows plugin...")
 	return nil
 }
 
 // metricsMapIterateCallback is the callback function that is called for each key-value pair in the metrics map.
 func (p *Plugin) metricsMapIterateCallback(key *MetricsKey, value *MetricsValues) {
-	p.l.Debug("MetricsMapIterateCallback")
-	p.l.Debug("Key", zap.String("Key", key.String()))
-	p.l.Debug("Value", zap.String("Value", value.String()))
+	if key == nil {
+		p.l.Error("MetricsMapIterateCallback key is nil")
+		return
+	}
+	if value == nil {
+		p.l.Error("MetricsMapIterateCallback value is nil")
+		return
+	}
 	if key.IsDrop() {
+		p.l.Debug("MetricsMapIterateCallback Drop", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.DropPacketsGauge.WithLabelValues(egressLabel).Set(float64(value.Count()))
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), egressLabel).Set(float64(value.Sum()))
 		} else if key.IsIngress() {
-			metrics.DropPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Count()))
+			metrics.DropBytesGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.BytesSum()))
+			metrics.DropPacketsGauge.WithLabelValues(key.DropForwardReason(), ingressLabel).Set(float64(value.Sum()))
 		}
 	} else {
+		p.l.Debug("MetricsMapIterateCallback Forward", zap.String("key", key.String()))
 		if key.IsEgress() {
-			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.Bytes()))
-			p.l.Debug("emitting bytes sent count metric", zap.Uint64(bytesSent, value.Bytes()))
-			metrics.WindowsGauge.WithLabelValues(packetsSent).Set(float64(value.Count()))
-			p.l.Debug("emitting packets sent count metric", zap.Uint64(packetsSent, value.Count()))
+			metrics.ForwardPacketsGauge.WithLabelValues(egressLabel).Set(float64(value.Sum()))
+			metrics.ForwardBytesGauge.WithLabelValues(egressLabel).Set(float64(value.BytesSum()))
 		} else if key.IsIngress() {
-			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Count()))
-			p.l.Debug("emitting packets received count metric", zap.Uint64(packetsReceived, value.Count()))
-			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.Bytes()))
-			p.l.Debug("emitting bytes received count metric", zap.Uint64(bytesReceived, value.Bytes()))
+			metrics.ForwardPacketsGauge.WithLabelValues(ingressLabel).Set(float64(value.Sum()))
+			metrics.ForwardBytesGauge.WithLabelValues(ingressLabel).Set(float64(value.BytesSum()))
 		}
 	}
 }
 
 // eventsMapCallback is the callback function that is called for each value  in the events map.
-func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint64) int {
-	p.l.Debug("EventsMapCallback")
-	p.l.Debug("Size", zap.Uint64("Size", size))
+func (p *Plugin) eventsMapCallback(data unsafe.Pointer, size uint32) {
 	err := p.handleTraceEvent(data, size)
 	if err != nil {
 		p.l.Error("Error handling trace event", zap.Error(err))
-		return -1
 	}
-	return 0
 }
 
-// pullCiliumeBPFMetrics is the function that is called periodically by the timer.
-func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
+func (p *Plugin) addEbpfToPath() error {
+	currPath := os.Getenv("PATH")
+	if strings.Contains(currPath, "ebpf-for-windows") {
+		return nil
+	}
+	programFiles := os.Getenv("ProgramFiles")
+	ebpfWindowsPath := programFiles + "\\ebpf-for-windows\\"
+	newPath := currPath + ";" + ebpfWindowsPath
+	if err := os.Setenv("PATH", newPath); err != nil {
+		p.l.Error("Error setting PATH environment variable", zap.Error(err))
+		return fmt.Errorf("error setting PATH environment variable: %v", err)
+	}
+
+	return nil
+}
+
+func (p *Plugin) pullMetricsAndEvents(ctx context.Context) {
 	eventsMap := NewEventsMap()
 	metricsMap := NewMetricsMap()
-	oldPath := os.Getenv("PATH")
-	newPath := oldPath + ";" + "C:\\Program Files\\ebpf-for-windows\\"
-	fmt.Println("PATH environment variable:", newPath)
-	if err := os.Setenv("PATH", newPath); err != nil {
-		fmt.Println("Error setting PATH environment variable: %v")
+
+	err := p.addEbpfToPath()
+	if err != nil {
+		return
 	}
+
+	if enricher.IsInitialized() && p.cfg.EnablePodLevel {
+		p.enricher = enricher.Instance()
+	} else {
+		p.l.Warn("retina enricher is not initialized")
+	}
+
 	if p.enricher != nil {
-		err := eventsMap.RegisterForCallback(p.eventsMapCallback)
+		err := eventsMap.RegisterForCallback(p.l, p.eventsMapCallback)
 		if err != nil {
 			p.l.Error("Error registering for events map callback", zap.Error(err))
 			return
@@ -169,12 +180,18 @@ func (p *Plugin) pullCiliumMetricsAndEvents(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			err := metricsMap.IterateWithCallback(p.metricsMapIterateCallback)
+			err := metricsMap.IterateWithCallback(p.l, p.metricsMapIterateCallback)
 			if err != nil {
 				p.l.Error("Error iterating metrics map", zap.Error(err))
 			}
 		case <-ctx.Done():
-			break
+			p.l.Error("ebpfwindows plugin canceling", zap.Error(ctx.Err()))
+			err := eventsMap.UnregisterForCallback()
+
+			if err != nil {
+				p.l.Error("Error Unregistering Events Map callback", zap.Error(err))
+			}
+			return
 		}
 	}
 }
@@ -201,57 +218,62 @@ func (p *Plugin) Generate(context.Context) error {
 	return nil
 }
 
-func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint64) error {
+func (p *Plugin) handleTraceEvent(data unsafe.Pointer, size uint32) error {
 	if uintptr(size) < unsafe.Sizeof(uint8(0)) {
-		return ErrInvalidEventData
+		return fmt.Errorf("invalid size %d", size)
 	}
-	eventType := *(*uint8)(data)
-	switch eventType {
-	case CiliumNotifyDrop:
-		if uintptr(size) < unsafe.Sizeof(DropNotify{}) {
-			p.l.Error("Invalid DropNotify data size", zap.Uint64("size", size))
-			return ErrInvalidEventData
-		}
-		e, err := p.parser.Decode(&observer.MonitorEvent{
-			Payload: &observer.PerfEvent{
-				Data: (*[unsafe.Sizeof(DropNotify{})]byte)(data)[:],
-			},
-		})
-		if err != nil {
-			p.l.Error("Could not convert event to flow", zap.Any("handleTraceEvent", data), zap.Error(err))
-			return ErrInvalidEventData
-		}
-		p.enricher.Write(e)
-	case CiliumNotifyTrace:
-		if uintptr(size) < unsafe.Sizeof(TraceNotify{}) {
-			p.l.Error("Invalid TraceNotify data size", zap.Uint64("size", size))
-			return ErrInvalidEventData
-		}
-		e, err := p.parser.Decode(&observer.MonitorEvent{
-			Payload: &observer.PerfEvent{
-				Data: (*[unsafe.Sizeof(TraceNotify{})]byte)(data)[:],
-			},
-		})
-		if err != nil {
-			p.l.Error("Could not convert event to flow", zap.Any("handleTraceEvent", data), zap.Error(err))
-			return ErrInvalidEventData
-		}
 
-		p.enricher.Write(e)
-	case CiliumNotifyTraceSock:
-		if uintptr(size) < unsafe.Sizeof(TraceSockNotify{}) {
-			p.l.Error("Invalid TraceSockNotify data size", zap.Uint64("size", size))
-			return ErrInvalidEventData
+	if data == nil {
+		return fmt.Errorf("handleTraceEvent data received is nil")
+	}
+	perfData := unsafe.Slice((*byte)(data), size)
+	eventType := perfData[0]
+	switch eventType {
+	case monitorapi.MessageTypeDrop:
+		if size <= uint32(unsafe.Sizeof(monitor.DropNotify{})) {
+			return fmt.Errorf("invalid size for DropNotify %d", size)
 		}
 		e, err := p.parser.Decode(&observer.MonitorEvent{
 			Payload: &observer.PerfEvent{
-				Data: (*[unsafe.Sizeof(TraceSockNotify{})]byte)(data)[:],
+				Data: perfData,
 			},
 		})
 		if err != nil {
-			p.l.Error("Could not convert event to flow", zap.Any("handleTraceEvent", data), zap.Error(err))
-			return ErrInvalidEventData
+			return fmt.Errorf("could not convert dropnotify event to flow: %w", err)
 		}
+		meta := &utils.RetinaMetadata{}
+		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(monitor.DropNotify{})))
+		fl := e.GetFlow()
+		if fl == nil {
+			return fmt.Errorf("dropnotify flow object is nil")
+		}
+		if fl.GetEventType() == nil {
+			return fmt.Errorf("dropnotify event type is nil")
+		}
+		// Set the drop reason.
+		eventType := fl.GetEventType().GetSubType()
+		meta.DropReason = utils.DropReason(eventType)
+		utils.AddRetinaMetadata(fl, meta)
+		p.enricher.Write(e)
+	case monitorapi.MessageTypeTrace:
+		if size <= uint32(unsafe.Sizeof(monitor.TraceNotify{})) {
+			return fmt.Errorf("invalid size for TraceNotify %d", size)
+		}
+		e, err := p.parser.Decode(&observer.MonitorEvent{
+			Payload: &observer.PerfEvent{
+				Data: perfData,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("could not convert tracenotify event to flow: %w", err)
+		}
+		meta := &utils.RetinaMetadata{}
+		utils.AddPacketSize(meta, size-uint32(unsafe.Sizeof(monitor.TraceNotify{})))
+		fl := e.GetFlow()
+		if fl == nil {
+			return fmt.Errorf("tracenotify flow object is nil")
+		}
+		utils.AddRetinaMetadata(fl, meta)
 		p.enricher.Write(e)
 	}
 	return nil

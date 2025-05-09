@@ -33,6 +33,8 @@ type InstallHelmChart struct {
 	KubeConfigFilePath string
 	ChartPath          string
 	TagEnv             string
+	EnableHeartbeat    bool
+	EnableWinBpfPlugin bool
 }
 
 func (i *InstallHelmChart) Run() error {
@@ -85,12 +87,35 @@ func (i *InstallHelmChart) Run() error {
 		},
 	}
 
+	if i.EnableHeartbeat {
+		chart.Values["enableTelemetry"] = i.EnableHeartbeat
+		chart.Values["logLevel"] = "error"
+	}
+
+	if i.EnableWinBpfPlugin {
+		if chart.Values["os"] == nil {
+			chart.Values["os"] = make(map[string]interface{})
+		}
+		osMap := chart.Values["os"].(map[string]interface{})
+		osMap["linux"] = false
+		osMap["windows"] = true
+
+		// Enable pod level metrics and annotations
+		chart.Values["enablePodLevel"] = true
+		chart.Values["enableAnnotations"] = true
+
+		// Set enabled plugins
+		chart.Values["enabledPlugin_linux"] = []string{}
+		chart.Values["enabledPlugin_win"] = []string{"ebpfwindows"}
+	}
+
 	chart.Values["image"].(map[string]interface{})["tag"] = tag
 	chart.Values["image"].(map[string]interface{})["pullPolicy"] = "Always"
 	chart.Values["operator"].(map[string]interface{})["tag"] = tag
 	chart.Values["image"].(map[string]interface{})["repository"] = imageRegistry + "/" + imageNamespace + "/retina-agent"
 	chart.Values["image"].(map[string]interface{})["initRepository"] = imageRegistry + "/" + imageNamespace + "/retina-init"
 	chart.Values["operator"].(map[string]interface{})["repository"] = imageRegistry + "/" + imageNamespace + "/retina-operator"
+	chart.Values["operator"].(map[string]interface{})["enabled"] = true
 
 	getclient := action.NewGet(actionConfig)
 	release, err := getclient.Run(i.ReleaseName)

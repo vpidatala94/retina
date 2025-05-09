@@ -360,6 +360,7 @@ func isAPIServerPod(ep *flow.Endpoint) bool {
 		return false
 	}
 
+	fmt.Printf("TEST DROP %s:%s, %s:%s", ep.Namespace, ep.PodName, common.APIServerEndpointName, common.APIServerEndpointName)
 	if ep.Namespace == common.APIServerEndpointName && ep.PodName == common.APIServerEndpointName {
 		return true
 	}

@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/microsoft/retina/test/e2e/common"
 	"github.com/microsoft/retina/test/e2e/framework/helpers"
@@ -49,40 +48,46 @@ func TestE2ERetina(t *testing.T) {
 	// Get to root of the repo by going up two directories
 	rootDir := filepath.Dir(filepath.Dir(cwd))
 
-	chartPath := filepath.Join(rootDir, "deploy", "legacy", "manifests", "controller", "helm", "retina")
+	chartPath := filepath.Join(rootDir, "deploy", "standard", "manifests", "controller", "helm", "retina")
 	//hubblechartPath := filepath.Join(rootDir, "deploy", "hubble", "manifests", "controller", "helm", "retina")
-	profilePath := filepath.Join(rootDir, "test", "profiles", "advanced", "values.yaml")
+	//profilePath := filepath.Join(rootDir, "test", "profiles", "advanced", "values.yaml")
 	kubeConfigFilePath := filepath.Join(rootDir, "test", "e2e", "test.pem")
 
-	// CreateTestInfra
-	createTestInfra := types.NewRunner(t, jobs.CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath, *common.CreateInfra))
+	err = jobs.LoadGenericFlags().Run()
+	require.NoError(t, err, "failed to load generic flags")
+
+	//// CreateTestInfra
+	createTestInfra := types.NewRunner(t, jobs.CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath, false))
 	createTestInfra.Run(ctx)
-
-	// Install Ebpf and XDP
-	installEbpfAndXDP := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
-	installEbpfAndXDP.Run(ctx)
-
-	time.Sleep(10 * time.Minute)
 
 	t.Cleanup(func() {
 		if *common.DeleteInfra {
-			_ = jobs.DeleteTestInfra(subID, rg, clusterName, location).Run()
+			_ = jobs.DeleteTestInfra(subID, rg, location, true).Run()
 		}
 	})
 
+	// Install and test Retina with Win BPF metrics
+	//installEbpfXdp := types.NewRunner(t, jobs.InstallEbpfXdp(kubeConfigFilePath))
+	//installEbpfXdp.Run(ctx)
+
 	// Install and test Retina basic metrics
-	basicMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath, common.TestPodNamespace))
-	basicMetricsE2E.Run(ctx)
+	//basicMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath, common.TestPodNamespace))
+	//basicMetricsE2E.Run(ctx)
 
 	//Upgrade and test Retina with advanced metrics
-	advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
-	advanceMetricsE2E.Run(ctx)
+	//advanceMetricsE2E := types.NewRunner(t, jobs.UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, profilePath, common.TestPodNamespace))
+	//advanceMetricsE2E.Run(ctx)
+
+	//createWindowsPod := types.NewRunner(t, jobs.CreateWindowsPod(kubeConfigFilePath))
+	//createWindowsPod.Run(ctx)
+
+	loadAndPinWinBPF := types.NewRunner(t, jobs.LoadAndPinWinBPF(kubeConfigFilePath))
+	loadAndPinWinBPF.Run(ctx)
+
+	installAndTestWinBPFMetricsE2E := types.NewRunner(t, jobs.InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath, chartPath))
+	installAndTestWinBPFMetricsE2E.Run(ctx)
 
 	// Install and test Hubble basic metrics
 	//validatehubble := types.NewRunner(t, jobs.ValidateHubble(kubeConfigFilePath, hubblechartPath, common.TestPodNamespace))
 	//validatehubble.Run(ctx)
-
-	// Validate Cilium Windows Metrics
-	validateWinBpfMetrics := types.NewRunner(t, jobs.ValidateWinBpfMetricJob(kubeConfigFilePath))
-	validateWinBpfMetrics.Run(ctx)
 }

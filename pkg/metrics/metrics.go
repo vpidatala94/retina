@@ -18,29 +18,34 @@ func InitializeMetrics() {
 		metricsLogger.Warn("Metrics already initialized. Exiting.")
 		return
 	}
+
 	DropPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.DroppedPacketsGaugeName,
 		dropPacketsGaugeDescription,
 		utils.Reason,
 		utils.Direction)
+
 	DropBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.DropBytesGaugeName,
 		dropBytesGaugeDescription,
 		utils.Reason,
 		utils.Direction)
+
 	ForwardPacketsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.ForwardPacketsGaugeName,
 		forwardPacketsGaugeDescription,
 		utils.Direction)
+
 	ForwardBytesGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		utils.ForwardBytesGaugeName,
 		forwardBytesGaugeDescription,
 		utils.Direction)
-	WindowsGauge = exporter.CreatePrometheusGaugeVecForMetric(
+
+	HNSStatsGauge = exporter.CreatePrometheusGaugeVecForMetric(
 		exporter.DefaultRegistry,
 		hnsStats,
 		hnsStatsDescription,
@@ -158,6 +163,36 @@ func InitializeMetrics() {
 		utils.InterfaceName,
 	)
 
+	ConntrackPacketsTx = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.ConntrackPacketsTxGaugeName,
+		ConntrackPacketTxDescription,
+	)
+
+	ConntrackPacketsRx = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.ConntrackPacketsRxGaugeName,
+		ConntrackPacketRxDescription,
+	)
+
+	ConntrackBytesTx = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.ConntrackBytesTxGaugeName,
+		ConntrackBytesTxDescription,
+	)
+
+	ConntrackBytesRx = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.ConntrackBytesRxGaugeName,
+		ConntrackBytesRxDescription,
+	)
+
+	ConntrackTotalConnections = exporter.CreatePrometheusGaugeVecForMetric(
+		exporter.DefaultRegistry,
+		utils.ConntrackTotalConnectionsName,
+		ConntrackTotalConnectionsDescription,
+	)
+
 	isInitialized = true
 	metricsLogger.Info("Metrics initialized")
 }
@@ -171,4 +206,7 @@ func GetCounterValue(m prometheus.Counter) float64 {
 		return *pm.Counter.Value
 	}
 	return 0
+}
+
+func OverrideMetricsRegistry() {
 }

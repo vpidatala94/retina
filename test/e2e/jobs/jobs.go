@@ -1,7 +1,6 @@
 package retina
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/microsoft/retina/test/e2e/common"
@@ -10,13 +9,15 @@ import (
 	"github.com/microsoft/retina/test/e2e/framework/kubernetes"
 	"github.com/microsoft/retina/test/e2e/framework/types"
 	"github.com/microsoft/retina/test/e2e/hubble"
-	"github.com/microsoft/retina/test/e2e/scenarios/perf"
+	"github.com/microsoft/retina/test/e2e/scenarios/dns"
+	"github.com/microsoft/retina/test/e2e/scenarios/drop"
+	"github.com/microsoft/retina/test/e2e/scenarios/latency"
+	tcp "github.com/microsoft/retina/test/e2e/scenarios/tcp"
 	"github.com/microsoft/retina/test/e2e/scenarios/windows"
 )
 
 func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string, createInfra bool) *types.Job {
 	job := types.NewJob("Create e2e test infrastructure")
-
 	if createInfra {
 		job.AddStep(&azure.CreateResourceGroup{
 			SubscriptionID:    subID,
@@ -44,38 +45,40 @@ func CreateTestInfra(subID, rg, clusterName, location, kubeConfigFilePath string
 		job.AddStep(&azure.GetAKSKubeConfig{
 			KubeConfigFilePath: kubeConfigFilePath,
 		}, nil)
-
 	} else {
 		job.AddStep(&azure.GetAKSKubeConfig{
 			KubeConfigFilePath: kubeConfigFilePath,
-			ClusterName:        clusterName,
+			ClusterName:        "runner-e2e-netobs-1746822808",
 			SubscriptionID:     subID,
-			ResourceGroupName:  rg,
+			ResourceGroupName:  "runner-e2e-netobs-1746822808",
 			Location:           location,
 		}, nil)
 	}
-
-	job.AddStep(&generic.LoadFlags{
-		TagEnv:            generic.DefaultTagEnv,
-		ImageNamespaceEnv: generic.DefaultImageNamespace,
-		ImageRegistryEnv:  generic.DefaultImageRegistry,
-	}, nil)
 	return job
 }
 
-func DeleteTestInfra(subID, rg, clusterName, location string) *types.Job {
+func DeleteTestInfra(subID, rg, location string, deleteInfra bool) *types.Job {
 	job := types.NewJob("Delete e2e test infrastructure")
 
-	job.AddStep(&azure.DeleteResourceGroup{
-		SubscriptionID:    subID,
-		ResourceGroupName: rg,
-		Location:          location,
-	}, nil)
+	if deleteInfra {
+		job.AddStep(&azure.DeleteResourceGroup{
+			SubscriptionID:    subID,
+			ResourceGroupName: rg,
+			Location:          location,
+		}, nil)
+	}
+	if deleteInfra {
+		job.AddStep(&azure.DeleteResourceGroup{
+			SubscriptionID:    subID,
+			ResourceGroupName: rg,
+			Location:          location,
+		}, nil)
+	}
 
 	return job
 }
 
-func InstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
+func InstallRetina(kubeConfigFilePath, chartPath string, enableHeartBeat bool) *types.Job {
 	job := types.NewJob("Install and test Retina with basic metrics")
 
 	job.AddStep(&kubernetes.InstallHelmChart{
@@ -84,37 +87,7 @@ func InstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
 		KubeConfigFilePath: kubeConfigFilePath,
 		ChartPath:          chartPath,
 		TagEnv:             generic.DefaultTagEnv,
-	}, nil)
-
-	return job
-}
-
-func UninstallRetina(kubeConfigFilePath, chartPath string) *types.Job {
-	job := types.NewJob("Uninstall Retina")
-
-	job.AddStep(&kubernetes.UninstallHelmChart{
-		Namespace:          common.KubeSystemNamespace,
-		ReleaseName:        "retina",
-		KubeConfigFilePath: kubeConfigFilePath,
-	}, nil)
-
-	return job
-}
-
-func ValidateWinBpfMetricJob(kubeConfigFilePath string) *types.Job {
-	job := types.NewJob("Validate Cilium Metrics")
-	job.AddScenario(windows.ValidateWinBpfMetricScenario())
-	return job
-}
-
-func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
-	job := types.NewJob("Install ebpf and xdp")
-	job.AddStep(&kubernetes.CreateNamespace{
-		KubeConfigFilePath: kubeConfigFilePath,
-		Namespace:          "install-ebpf-xdp"}, nil)
-
-	job.AddStep(&kubernetes.ApplyYamlConfig{
-		YamlFilePath: "yaml/windows/install-ebpf-xdp.yaml",
+		EnableHeartbeat:    enableHeartBeat,
 	}, nil)
 
 	return job
@@ -131,70 +104,70 @@ func InstallAndTestRetinaBasicMetrics(kubeConfigFilePath, chartPath string, test
 		TagEnv:             generic.DefaultTagEnv,
 	}, nil)
 
+	dnsScenarios := []struct {
+		name string
+		req  *dns.RequestValidationParams
+		resp *dns.ResponseValidationParams
+	}{
+		{
+			name: "Validate basic DNS request and response metrics for a valid domain",
+			req: &dns.RequestValidationParams{
+				NumResponse: "0",
+				Query:       "kubernetes.default.svc.cluster.local.",
+				QueryType:   "A",
+				Command:     "nslookup kubernetes.default",
+				ExpectError: false,
+			},
+			resp: &dns.ResponseValidationParams{
+				NumResponse: "1",
+				Query:       "kubernetes.default.svc.cluster.local.",
+				QueryType:   "A",
+				ReturnCode:  "No Error",
+				Response:    "10.0.0.1",
+			},
+		},
+		{
+			name: "Validate basic DNS request and response metrics for a non-existent domain",
+			req: &dns.RequestValidationParams{
+				NumResponse: "0",
+				Query:       "some.non.existent.domain.",
+				QueryType:   "A",
+				Command:     "nslookup some.non.existent.domain",
+				ExpectError: true,
+			},
+			resp: &dns.ResponseValidationParams{
+				NumResponse: "0",
+				Query:       "some.non.existent.domain.",
+				QueryType:   "A",
+				Response:    dns.EmptyResponse, // hacky way to bypass the framework for now
+				ReturnCode:  "Non-Existent Domain",
+			},
+		},
+	}
+
+	for _, arch := range common.Architectures {
+		job.AddScenario(drop.ValidateDropMetric(testPodNamespace, arch))
+		job.AddScenario(tcp.ValidateTCPMetrics(testPodNamespace, arch))
+
+		for _, scenario := range dnsScenarios {
+			name := scenario.name + " - Arch: " + arch
+			job.AddScenario(dns.ValidateBasicDNSMetrics(name, scenario.req, scenario.resp, testPodNamespace, arch))
+		}
+	}
+
 	/*
-		dnsScenarios := []struct {
-			name string
-			req  *dns.RequestValidationParams
-			resp *dns.ResponseValidationParams
-		}{
-			{
-				name: "Validate basic DNS request and response metrics for a valid domain",
-				req: &dns.RequestValidationParams{
-					NumResponse: "0",
-					Query:       "kubernetes.default.svc.cluster.local.",
-					QueryType:   "A",
-					Command:     "nslookup kubernetes.default",
-					ExpectError: false,
-				},
-				resp: &dns.ResponseValidationParams{
-					NumResponse: "1",
-					Query:       "kubernetes.default.svc.cluster.local.",
-					QueryType:   "A",
-					ReturnCode:  "No Error",
-					Response:    "10.0.0.1",
-				},
-			},
-			{
-				name: "Validate basic DNS request and response metrics for a non-existent domain",
-				req: &dns.RequestValidationParams{
-					NumResponse: "0",
-					Query:       "some.non.existent.domain.",
-					QueryType:   "A",
-					Command:     "nslookup some.non.existent.domain",
-					ExpectError: true,
-				},
-				resp: &dns.ResponseValidationParams{
-					NumResponse: "0",
-					Query:       "some.non.existent.domain.",
-					QueryType:   "A",
-					Response:    dns.EmptyResponse, // hacky way to bypass the framework for now
-					ReturnCode:  "Non-Existent Domain",
-				},
-			},
-		}
-
-		for _, arch := range common.Architectures {
-			job.AddScenario(drop.ValidateDropMetric(testPodNamespace, arch))
-			job.AddScenario(tcp.ValidateTCPMetrics(testPodNamespace, arch))
-
-			for _, scenario := range dnsScenarios {
-				name := scenario.name + " - Arch: " + arch
-				job.AddScenario(dns.ValidateBasicDNSMetrics(name, scenario.req, scenario.resp, testPodNamespace, arch))
-			}
-		}
+		job.AddStep(&kubernetes.EnsureStableComponent{
+			PodNamespace:           common.KubeSystemNamespace,
+			LabelSelector:          "k8s-app=retina",
+			IgnoreContainerRestart: false,
+		}, nil)
 	*/
-
-	job.AddStep(&kubernetes.EnsureStableComponent{
-		PodNamespace:           common.KubeSystemNamespace,
-		LabelSelector:          "k8s-app=retina",
-		IgnoreContainerRestart: false,
-	}, nil)
-
 	return job
 }
 
 func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFilePath string, testPodNamespace string) *types.Job {
 	job := types.NewJob("Upgrade and test Retina with advanced metrics")
+
 	// enable advanced metrics
 	job.AddStep(&kubernetes.UpgradeRetinaHelmChart{
 		Namespace:          common.KubeSystemNamespace,
@@ -204,57 +177,77 @@ func UpgradeAndTestRetinaAdvancedMetrics(kubeConfigFilePath, chartPath, valuesFi
 		TagEnv:             generic.DefaultTagEnv,
 		ValuesFile:         valuesFilePath,
 	}, nil)
-	/*
-		dnsScenarios := []struct {
-			name string
-			req  *dns.RequestValidationParams
-			resp *dns.ResponseValidationParams
-		}{
-			{
-				name: "Validate advanced DNS request and response metrics for a valid domain",
-				req: &dns.RequestValidationParams{
-					NumResponse: "0",
-					Query:       "kubernetes.default.svc.cluster.local.",
-					QueryType:   "A",
-					Command:     "nslookup kubernetes.default",
-					ExpectError: false,
-				},
-				resp: &dns.ResponseValidationParams{
-					NumResponse: "1",
-					Query:       "kubernetes.default.svc.cluster.local.",
-					QueryType:   "A",
-					ReturnCode:  "NOERROR",
-					Response:    "10.0.0.1",
-				},
+
+	dnsScenarios := []struct {
+		name string
+		req  *dns.RequestValidationParams
+		resp *dns.ResponseValidationParams
+	}{
+		{
+			name: "Validate advanced DNS request and response metrics for a valid domain",
+			req: &dns.RequestValidationParams{
+				NumResponse: "0",
+				Query:       "kubernetes.default.svc.cluster.local.",
+				QueryType:   "A",
+				Command:     "nslookup kubernetes.default",
+				ExpectError: false,
 			},
-			{
-				name: "Validate advanced DNS request and response metrics for a non-existent domain",
-				req: &dns.RequestValidationParams{
-					NumResponse: "0",
-					Query:       "some.non.existent.domain.",
-					QueryType:   "A",
-					Command:     "nslookup some.non.existent.domain.",
-					ExpectError: true,
-				},
-				resp: &dns.ResponseValidationParams{
-					NumResponse: "0",
-					Query:       "some.non.existent.domain.",
-					QueryType:   "A",
-					Response:    dns.EmptyResponse, // hacky way to bypass the framework for now
-					ReturnCode:  "NXDOMAIN",
-				},
+			resp: &dns.ResponseValidationParams{
+				NumResponse: "1",
+				Query:       "kubernetes.default.svc.cluster.local.",
+				QueryType:   "A",
+				ReturnCode:  "NOERROR",
+				Response:    "10.0.0.1",
 			},
+		},
+		{
+			name: "Validate advanced DNS request and response metrics for a non-existent domain",
+			req: &dns.RequestValidationParams{
+				NumResponse: "0",
+				Query:       "some.non.existent.domain.",
+				QueryType:   "A",
+				Command:     "nslookup some.non.existent.domain.",
+				ExpectError: true,
+			},
+			resp: &dns.ResponseValidationParams{
+				NumResponse: "0",
+				Query:       "some.non.existent.domain.",
+				QueryType:   "A",
+				Response:    dns.EmptyResponse, // hacky way to bypass the framework for now
+				ReturnCode:  "NXDOMAIN",
+			},
+		},
+		{
+			name: "Validate advanced DNS request and response metrics for a non-existent domain",
+			req: &dns.RequestValidationParams{
+				NumResponse: "0",
+				Query:       "some.non.existent.domain.",
+				QueryType:   "A",
+				Command:     "nslookup some.non.existent.domain.",
+				ExpectError: true,
+			},
+			resp: &dns.ResponseValidationParams{
+				NumResponse: "0",
+				Query:       "some.non.existent.domain.",
+				QueryType:   "A",
+				Response:    dns.EmptyResponse, // hacky way to bypass the framework for now
+				ReturnCode:  "NXDOMAIN",
+			},
+		},
+	}
+
+	for _, arch := range common.Architectures {
+		for _, scenario := range dnsScenarios {
+			name := scenario.name + " - Arch: " + arch
+			job.AddScenario(dns.ValidateAdvancedDNSMetrics(name, scenario.req, scenario.resp, kubeConfigFilePath, testPodNamespace, arch))
 		}
 
-		for _, arch := range common.Architectures {
-			for _, scenario := range dnsScenarios {
-				name := scenario.name + " - Arch: " + arch
-				job.AddScenario(dns.ValidateAdvancedDNSMetrics(name, scenario.req, scenario.resp, kubeConfigFilePath, testPodNamespace, arch))
-			}
-		}
+		job.AddScenario(windows.ValidateWindowsBasicMetric())
+	}
 
-		job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
-	*/
+	job.AddScenario(latency.ValidateLatencyMetric(testPodNamespace))
+
+
 	job.AddStep(&kubernetes.EnsureStableComponent{
 		PodNamespace:           common.KubeSystemNamespace,
 		LabelSelector:          "k8s-app=retina",
@@ -288,50 +281,74 @@ func ValidateHubble(kubeConfigFilePath, chartPath string, testPodNamespace strin
 	return job
 }
 
-func RunPerfTest(kubeConfigFilePath string, chartPath string) *types.Job {
-	job := types.NewJob("Run performance tests")
+func LoadGenericFlags() *types.Job {
+	job := types.NewJob("Loading Generic Flags to env")
 
-	benchmarkFile := fmt.Sprintf("netperf-benchmark-%s.json", time.Now().Format("20060102150405"))
-	resultFile := fmt.Sprintf("netperf-result-%s.json", time.Now().Format("20060102150405"))
-	regressionFile := fmt.Sprintf("netperf-regression-%s.json", time.Now().Format("20060102150405"))
-
-	job.AddStep(&perf.GetNetworkPerformanceMeasures{
-		KubeConfigFilePath: kubeConfigFilePath,
-		ResultTag:          "no-retina",
-		JsonOutputFile:     benchmarkFile,
-	}, &types.StepOptions{
-		SkipSavingParametersToJob: true,
-	})
-
-	job.AddStep(&kubernetes.InstallHelmChart{
-		Namespace:          "kube-system",
-		ReleaseName:        "retina",
-		KubeConfigFilePath: kubeConfigFilePath,
-		ChartPath:          chartPath,
-		TagEnv:             generic.DefaultTagEnv,
+	job.AddStep(&generic.LoadFlags{
+		TagEnv:            generic.DefaultTagEnv,
+		ImageNamespaceEnv: generic.DefaultImageNamespace,
+		ImageRegistryEnv:  generic.DefaultImageRegistry,
 	}, nil)
 
-	job.AddStep(&perf.GetNetworkPerformanceMeasures{
+	return job
+}
+
+func InstallEbpfXdp(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Install ebpf and xdp")
+	job.AddStep(&kubernetes.CreateNamespace{
 		KubeConfigFilePath: kubeConfigFilePath,
-		ResultTag:          "retina",
-		JsonOutputFile:     resultFile,
-	}, &types.StepOptions{
-		SkipSavingParametersToJob: true,
-	})
+		Namespace:          "install-ebpf-xdp"}, nil)
+	job.AddStep(&kubernetes.ApplyYamlConfig{
+		YamlFilePath: "yaml/windows/install-ebpf-xdp.yaml",
+	}, nil)
+	job.AddStep(&generic.Sleep{
+		Duration: 10 * time.Minute,
+	}, nil)
+	return job
+}
 
-	job.AddStep(&perf.GetNetworkRegressionResults{
-		BaseResultsFile:       benchmarkFile,
-		NewResultsFile:        resultFile,
-		RegressionResultsFile: regressionFile,
-	}, &types.StepOptions{
-		SkipSavingParametersToJob: true,
-	})
+func LoadAndPinWinBPF(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Load and pin WinBPF")
+	job.AddStep(&kubernetes.LoadAndPinWinBPF{
+		KubeConfigFilePath:                 kubeConfigFilePath,
+		LoadAndPinWinBPFDeamonSetNamespace: "install-ebpf-xdp",
+		LoadAndPinWinBPFDeamonSetName:      "install-ebpf-xdp",
+	}, nil)
+	job.AddStep(&generic.Sleep{
+		Duration: 1 * time.Minute,
+	}, nil)
+	return job
+}
 
-	job.AddStep(&perf.PublishPerfResults{
-		ResultsFile: regressionFile,
-	}, &types.StepOptions{
-		SkipSavingParametersToJob: true,
-	})
+func CreateWindowsPod(kubeConfigFilePath string) *types.Job {
+	job := types.NewJob("Create NON-HPC Windows Pod")
+	job.AddStep(&kubernetes.ApplyYamlConfig{
+		KubeConfigFilePath: kubeConfigFilePath,
+		YamlFilePath:       "yaml/windows/non-hpc-pod.yaml",
+	}, nil)
+	job.AddStep(&generic.Sleep{
+		Duration: 2 * time.Minute,
+	}, nil)
+	return job
+}
 
+func InstallAndTestRetinaWinBPFMetrics(kubeConfigFilePath string, chartPath string) *types.Job {
+	job := types.NewJob("Install Retina with WinBPF metrics")
+
+
+		job.AddStep(&kubernetes.InstallHelmChart{
+			KubeConfigFilePath: kubeConfigFilePath,
+			Namespace:          common.KubeSystemNamespace,
+			ReleaseName:        "retina",
+			ChartPath:          chartPath,
+			TagEnv:             generic.DefaultTagEnv,
+			EnableWinBpfPlugin: true,
+		}, nil)
+
+		job.AddStep(&generic.Sleep{
+			Duration: 5 * time.Minute,
+		}, nil)
+
+	job.AddScenario(windows.ValidateWinBpfMetricScenario())
 	return job
 }

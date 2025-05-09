@@ -26,7 +26,7 @@ SEC(".maps")
 struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __type(key, uint32_t);
-    __type(value, struct trace_notify);
+    __type(value, struct trace_notify_wrapper);
     __uint(max_entries, 1);
 } trc_buffer;
 
@@ -34,7 +34,7 @@ SEC(".maps")
 struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __type(key, uint32_t);
-    __type(value, struct drop_notify);
+    __type(value, struct drop_notify_wrapper);
     __uint(max_entries, 1);
 } drp_buffer;
 
@@ -76,49 +76,67 @@ void update_metrics(uint64_t bytes, uint8_t direction,
 	}
 }
 
-void create_trace_ntfy_event(struct trace_notify* trc_elm)
+void create_trace_ntfy_event(struct trace_notify_wrapper* trc_elm_wp)
 {
-    memset(trc_elm, 0, sizeof(struct trace_notify));
-    trc_elm->type       = CILIUM_NOTIFY_TRACE;
-    trc_elm->subtype    = 0;
-	trc_elm->source     = 0;
-	trc_elm->hash       = 0;
-    trc_elm->len_orig   = 128;
-	trc_elm->len_cap    = 128;
-    trc_elm->version    = 1;
-	trc_elm->src_label	= 0;
-	trc_elm->dst_label	= 0;
-	trc_elm->dst_id		= 0;
-	trc_elm->reason		= 0;
-	trc_elm->ifindex	= 0;
+    memset(trc_elm_wp, 0, sizeof(struct trace_notify_wrapper));
+    trc_elm_wp->trace.type       = CILIUM_NOTIFY_TRACE;
+    trc_elm_wp->trace.subtype    = 0;
+	trc_elm_wp->trace.source     = 10; // random source
+	trc_elm_wp->trace.hash       = 0;
+    trc_elm_wp->trace.len_orig   = 128;
+	trc_elm_wp->trace.len_cap    = 128;
+    trc_elm_wp->trace.version    = 1;
+	trc_elm_wp->trace.src_label	= 0;
+	trc_elm_wp->trace.dst_label	= 0;
+	trc_elm_wp->trace.dst_id		= 0;
+	trc_elm_wp->trace.reason		= 0;
+	trc_elm_wp->trace.ifindex	= 0;
 }
 
-void create_drop_event(struct drop_notify* drp_elm)
+void create_drop_event(struct drop_notify_wrapper* drp_elm_wp)
 {
-    memset(drp_elm, 0, sizeof(struct drop_notify));
-    drp_elm->type       = CILIUM_NOTIFY_DROP;
-	drp_elm->subtype    = 0;
-	drp_elm->source     = 0;
-	drp_elm->hash       = 0;
-	drp_elm->len_orig   = 128;
-	drp_elm->len_cap    = 128;
-	drp_elm->version    = 1;
-	drp_elm->src_label	= 0;
-	drp_elm->dst_label	= 0;
-	drp_elm->dst_id		= 0;
-	drp_elm->line		= 0;
-    drp_elm->file		= 0;
-    drp_elm->ext_error	= 0;
-	drp_elm->ifindex	= 0;
+    memset(drp_elm_wp, 0, sizeof(struct drop_notify_wrapper));
+    drp_elm_wp->drop.type       = CILIUM_NOTIFY_DROP;
+	drp_elm_wp->drop.subtype    = 6;
+	drp_elm_wp->drop.source     = 10; // random source
+	drp_elm_wp->drop.hash       = 0;
+	drp_elm_wp->drop.len_orig   = 128;
+	drp_elm_wp->drop.len_cap    = 128;
+	drp_elm_wp->drop.version    = 1;
+	drp_elm_wp->drop.src_label	= 0;
+	drp_elm_wp->drop.dst_label	= 0;
+	drp_elm_wp->drop.dst_id		= 0;
+	drp_elm_wp->drop.line		= 0;
+    drp_elm_wp->drop.file		= 0;
+    drp_elm_wp->drop.ext_error	= 0;
+	drp_elm_wp->drop.ifindex	= 0;
+}
+
+int
+check_filter(struct filter* flt, struct five_tuple* tup) {
+
+    if (flt->srcIP != 0 && flt->srcIP != tup->srcIP) {
+        return 1;
+    }
+
+    if (flt->dstIP != 0 && flt->dstIP != tup->dstIP) {
+        return 1;
+    }
+
+    if (flt->srcprt != 0 && flt->srcprt != tup->srcprt) {
+        return 1;
+    }
+
+    if (flt->dstprt != 0 && flt->dstprt != tup->dstprt) {
+        return 1;
+    }
+
+    return 0;
 }
 
 int extract_five_tuple_info(void* data, int bytes_to_copy, struct five_tuple* tup) {
     struct ethhdr *eth;
     uint8_t present = 1;
-
-    if (data == NULL || tup == NULL) {
-        return 1;
-    }
 
     if (bytes_to_copy < sizeof(struct ethhdr)) {
         return 1;
@@ -165,31 +183,6 @@ int extract_five_tuple_info(void* data, int bytes_to_copy, struct five_tuple* tu
     return 0;
 }
 
-int
-check_filter(struct filter* flt, struct five_tuple* tup) {
-    if (flt == NULL || tup == NULL) {
-        return 1;
-    }
-
-    if (flt->srcIP != 0 && flt->srcIP != tup->srcIP) {
-        return 1;
-    }
-
-    if (flt->dstIP != 0 && flt->dstIP != tup->dstIP) {
-        return 1;
-    }
-
-    if (flt->srcprt != 0 && flt->srcprt != tup->srcprt) {
-        return 1;
-    }
-
-    if (flt->dstprt != 0 && flt->dstprt != tup->dstprt) {
-        return 1;
-    }
-
-    return 0;
-}
-
 SEC("xdp")
 int
 event_writer(xdp_md_t* ctx) {
@@ -199,10 +192,7 @@ event_writer(xdp_md_t* ctx) {
     struct five_tuple tup;
     uint32_t size_to_copy = 128;
     uint8_t flt_evttype, present = 1;
-
-    if (ctx->data == NULL || ctx->data_end == NULL) {
-        return XDP_PASS;
-    }
+    uint8_t reason  = 0;
 
     if ((uintptr_t)ctx->data + size_to_copy > (uintptr_t)ctx->data_end) {
 		size_to_copy = (uintptr_t)ctx->data_end - (uintptr_t)ctx->data;
@@ -222,40 +212,41 @@ event_writer(xdp_md_t* ctx) {
         return XDP_PASS;
     }
 
-    update_metrics(size_to_copy, METRIC_INGRESS, 0, 0, 0);
-
     if (bpf_map_update_elem(&five_tuple_map, &tup, &present, BPF_ANY) != 0) {
         return XDP_PASS;
     }
 
     flt_evttype = flt->event;
 	if (flt_evttype == CILIUM_NOTIFY_TRACE) {
-        struct trace_notify* trc_elm;
+        struct trace_notify_wrapper* trc_elm_wp;
 
         //Create a Mock Trace Event
-        trc_elm = (struct trace_notify *) bpf_map_lookup_elem(&trc_buffer, &buf_key);
-        if (trc_elm == NULL) {
+        trc_elm_wp = (struct trace_notify_wrapper *) bpf_map_lookup_elem(&trc_buffer, &buf_key);
+        if (trc_elm_wp == NULL) {
             return XDP_PASS;
         }
-        create_trace_ntfy_event(trc_elm);
-        memset(trc_elm->data, 0, sizeof(trc_elm->data));
-        memcpy(trc_elm->data, ctx->data, size_to_copy);
-        bpf_ringbuf_output(&cilium_events, trc_elm, sizeof(struct trace_notify), 0);
+        create_trace_ntfy_event(trc_elm_wp);
+        memset(trc_elm_wp->data, 0, sizeof(trc_elm_wp->data));
+        memcpy(trc_elm_wp->data, ctx->data, size_to_copy);
+        bpf_ringbuf_output(&cilium_events, trc_elm_wp, sizeof(struct trace_notify_wrapper), 0);
     }
 
     if (flt_evttype == CILIUM_NOTIFY_DROP) {
-        struct drop_notify* drp_elm;
+        struct drop_notify_wrapper* drp_elm_wp;
 
         //Create a Mock Drop Event
-        drp_elm = (struct drop_notify *) bpf_map_lookup_elem(&drp_buffer, &buf_key);
-        if (drp_elm == NULL) {
+        drp_elm_wp = (struct drop_notify_wrapper *) bpf_map_lookup_elem(&drp_buffer, &buf_key);
+        if (drp_elm_wp == NULL) {
             return XDP_PASS;
         }
-        create_drop_event(drp_elm);
-        memset(drp_elm->data, 0, sizeof(drp_elm->data));
-        memcpy(drp_elm->data, ctx->data, size_to_copy);
-        bpf_ringbuf_output(&cilium_events, drp_elm, sizeof(struct drop_notify), 0);
+        reason = 130;
+        create_drop_event(drp_elm_wp);
+        memset(drp_elm_wp->data, 0, sizeof(drp_elm_wp->data));
+        memcpy(drp_elm_wp->data, ctx->data, size_to_copy);
+        bpf_ringbuf_output(&cilium_events, drp_elm_wp, sizeof(struct drop_notify_wrapper), 0);
     }
+
+    update_metrics(size_to_copy, METRIC_INGRESS, reason, 0, 0);
 
     return XDP_PASS;
 }
